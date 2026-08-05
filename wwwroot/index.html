@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Percy Agent</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <span class="brand-mark">P</span>
+          <div><strong>Percy Agent</strong><small>local email control</small></div>
+        </div>
+        <nav>
+          <button class="nav active" data-view="today">Today <span id="today-count">0</span></button>
+          <button class="nav" data-view="accounts">Accounts</button>
+          <button class="nav" data-view="rules">Rules</button>
+          <button class="nav" data-view="handled">Handled quietly</button>
+        </nav>
+        <div class="local-note">
+          <span class="pulse"></span>
+          <div><strong>Local demo</strong><small>No mailbox connected</small></div>
+        </div>
+      </aside>
+
+      <main>
+        <header>
+          <div>
+            <p class="eyebrow">YOUR MORNING QUEUE</p>
+            <h1>Good morning, Stephen.</h1>
+            <p class="sub">A finite list. When this is empty, email is finished for today.</p>
+          </div>
+          <div class="clock" id="clock"></div>
+        </header>
+
+        <section id="view-today" class="view active">
+          <div class="stats">
+            <article><span>Needs you</span><strong id="stat-total">0</strong><small>maximum 10 at once</small></article>
+            <article><span>Replies drafted</span><strong id="stat-drafts">0</strong><small>nothing sends itself</small></article>
+            <article><span>Bills & deadlines</span><strong id="stat-bills">0</strong><small>payment never assumed</small></article>
+            <article><span>Uncertain</span><strong id="stat-uncertain">0</strong><small>teach Percy once</small></article>
+          </div>
+          <div id="queue" class="queue"></div>
+        </section>
+
+        <section id="view-accounts" class="view">
+          <div class="section-head">
+            <div><p class="eyebrow">PER-MAILBOX BEHAVIOUR</p><h2>Accounts</h2></div>
+            <button class="primary" disabled title="Live connections are deliberately disabled in demo mode">Add account</button>
+          </div>
+          <div id="accounts" class="account-grid"></div>
+        </section>
+
+        <section id="view-rules" class="view">
+          <div class="section-head">
+            <div><p class="eyebrow">FREE BEFORE AI</p><h2>Rules and keywords</h2></div>
+          </div>
+          <form id="rule-form" class="rule-form">
+            <select name="account_id" id="rule-account"><option value="">All accounts</option></select>
+            <select name="field"><option value="body">Body</option><option value="subject">Subject</option><option value="sender">Sender</option><option value="recipient">Recipient</option></select>
+            <select name="operator"><option value="contains">contains</option><option value="equals">equals</option><option value="domain">has domain</option></select>
+            <input name="pattern" required maxlength="500" placeholder="Phrase, address or domain">
+            <select name="action"><option value="warmup">Warm-up</option><option value="automated">Automated</option><option value="bill">Bill</option><option value="important">Important</option><option value="ignore">Ignore</option><option value="reply">Needs reply</option></select>
+            <button class="primary">Add rule</button>
+          </form>
+          <div id="rules" class="rule-list"></div>
+        </section>
+
+        <section id="view-handled" class="view">
+          <div class="section-head">
+            <div><p class="eyebrow">ACCOUNTED FOR, NOT SHOWN</p><h2>Handled quietly</h2></div>
+          </div>
+          <div id="handled" class="handled-grid"></div>
+          <div class="safety">
+            <strong>Demo safety boundary</strong>
+            <p>Percy has not moved, deleted, read or sent any real email. Warm-up cleanup will use a seven-day recoverable quarantine before provider Trash when live connections are introduced.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+    <dialog id="message-dialog">
+      <button class="dialog-close" aria-label="Close">×</button>
+      <div id="dialog-content"></div>
+    </dialog>
+    <script src="/app.js"></script>
+  </body>
+</html>
+
