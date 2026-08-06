@@ -1,8 +1,25 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PercyAgent</AssemblyName>
+    <RootNamespace>PercyAgent</RootNamespace>
+    <!-- A single portable file store; no server, no service to install. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The queue is still reachable over localhost so local processes
+         (Percy Worker, scripts) can push work in. The app itself PULLS
+         from remote systems, so nothing needs to reach into this machine. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.12" />
+  </ItemGroup>
 </Project>
