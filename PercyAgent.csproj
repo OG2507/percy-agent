@@ -7,8 +7,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PercyAgent</AssemblyName>
     <RootNamespace>PercyAgent</RootNamespace>
-    <!-- A single portable file store; no server, no service to install. -->
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- MUST stay false. Set true originally to keep the app portable, but WPF's
+         font machinery calls new CultureInfo("en") inside the static constructor
+         of MS.Internal.FontCache.MajorLanguages, which is illegal in invariant
+         mode. A failed type initializer is cached for the life of the process, so
+         EVERY subsequent text measurement throws and the window dies the moment
+         you interact with it. Cost an afternoon on 2026-08-07 — the symptom looks
+         exactly like a corrupt font cache, and it isn't. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>

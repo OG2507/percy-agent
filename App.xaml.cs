@@ -17,9 +17,10 @@ public partial class App : Application
         // app gets written down first, and anything survivable does not kill it.
         DispatcherUnhandledException += (_, args) =>
         {
+            // Log only — no MessageBox. A dialog has to measure text to draw
+            // itself, so if the fault IS in text rendering the handler throws
+            // inside the handler and takes the app down anyway. That happened.
             Record("UI thread", args.Exception);
-            MessageBox.Show($"Percy hit a problem and kept going.\n\n{args.Exception.Message}\n\nWritten to:\n{LogPath}",
-                            "Percy Agent", MessageBoxButton.OK, MessageBoxImage.Warning);
             args.Handled = true;                    // survivable — do not take the window down
         };
 
