@@ -19,7 +19,49 @@
     <Style TargetType="TextBlock">
       <Setter Property="Foreground" Value="{StaticResource Ink}"/>
       <Setter Property="FontFamily" Value="Segoe UI"/>
-      <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+      <!-- Display, not Ideal. Ideal takes WPF's DirectWrite path, which computes
+           typography availability through MS.Internal.FontCache.MajorLanguages —
+           and that type initializer throws on this machine (a broken WPF font
+           cache, not a missing font; all 348 are present). It killed the window
+           on 2026-08-07. Display uses the GDI-compatible path and never goes
+           near it. Visually near-identical at these sizes. -->
+      <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+    </Style>
+
+    <!-- Tabs. WPF's stock TabItem chrome is drawn for a light theme and comes out
+         white on white against this background — invisible. -->
+    <Style TargetType="TabControl">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0,14,0,0"/>
+    </Style>
+
+    <Style TargetType="TabItem">
+      <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+      <Setter Property="FontFamily" Value="Segoe UI"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TabItem">
+            <Border x:Name="Chrome" Background="Transparent" CornerRadius="7"
+                    Padding="16,9" Margin="0,0,6,0"
+                    BorderThickness="0,0,0,2" BorderBrush="Transparent">
+              <ContentPresenter ContentSource="Header" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource Panel}"/>
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
 
     <!-- Flat, quiet buttons: this screen should not shout. -->

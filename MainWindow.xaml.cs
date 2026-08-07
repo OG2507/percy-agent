@@ -69,13 +69,25 @@ public partial class MainWindow : Window
 
     async Task RefreshWorkAsync()
     {
-        var s = await baldrick.GetStatusAsync();
-        StatAwaiting.Text = s.AwaitingApproval.ToString();
-        StatComfy.Text = s.ComfyUp ? "up" : "down";
-        StatComfy.Foreground = new SolidColorBrush(s.ComfyUp
-            ? Color.FromRgb(0x5F, 0xBF, 0x8F) : Color.FromRgb(0xE0, 0x5A, 0x5A));
-        WorkError.Text = s.Error ?? "";
-        WorkError.Visibility = s.Error is null ? Visibility.Collapsed : Visibility.Visible;
+        // Nothing on this tab is worth losing the window over — a Baldrick that is
+        // down, or a missing secret file, should read as a red line, not a crash.
+        try
+        {
+            var s = await baldrick.GetStatusAsync();
+            StatAwaiting.Text = s.AwaitingApproval.ToString();
+            StatComfy.Text = s.ComfyUp ? "up" : "down";
+            StatComfy.Foreground = new SolidColorBrush(s.ComfyUp
+                ? Color.FromRgb(0x5F, 0xBF, 0x8F) : Color.FromRgb(0xE0, 0x5A, 0x5A));
+            WorkError.Text = s.Error ?? "";
+            WorkError.Visibility = s.Error is null ? Visibility.Collapsed : Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            StatAwaiting.Text = "—";
+            StatComfy.Text = "?";
+            WorkError.Text = $"Could not read Baldrick: {ex.Message}";
+            WorkError.Visibility = Visibility.Visible;
+        }
     }
 
     void AppendLog(string line) => Dispatcher.Invoke(() =>
