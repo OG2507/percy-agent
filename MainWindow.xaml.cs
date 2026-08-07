@@ -12,7 +12,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += (_, _) => Refresh();
+        Loaded += async (_, _) => { Refresh(); await RefreshWorkAsync(); };
     }
 
     /// <summary>A view row — the record plus the few things XAML needs to draw it.</summary>
@@ -57,6 +57,50 @@ public partial class MainWindow : Window
         Footer.Text = $"{handled} handled without you  ·  {Store.RuleCount()} rules active";
         DbHint.Text = Store.DatabasePath;
     }
+
+    // ── Work tab ────────────────────────────────────────────────────────────
+    // Nothing here keeps its own copy of the queue. Baldrick's queue is the only
+    // queue, so approving on the website and approving here are the same act.
+
+    readonly Baldrick baldrick = new();
+    CancellationTokenSource? runCts;
+
+    async void RefreshWork_Click(object sender, RoutedEventArgs e) => await RefreshWorkAsync();
+
+    async Task RefreshWorkAsync()
+    {
+        var s = await baldrick.GetStatusAsync();
+        StatAwaiting.Text = s.AwaitingApproval.ToString();
+        StatComfy.Text = s.ComfyUp ? "up" : "down";
+        StatComfy.Foreground = new SolidColorBrush(s.ComfyUp
+            ? Color.FromRgb(0x5F, 0xBF, 0x8F) : Color.FromRgb(0xE0, 0x5A, 0x5A));
+        WorkError.Text = s.Error ?? "";
+        WorkError.Visibility = s.Error is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    void AppendLog(string line) => Dispatcher.Invoke(() =>
+    {
+        if (WorkLog.Text.StartsWith("Percy hasn't run")) WorkLog.Text = "";
+        WorkLog.Text += (WorkLog.Text.Length > 0 ? "\n" : "") + line;
+        LogScroll.ScrollToEnd();
+    });
+
+    async void Run_Click(object sender, RoutedEventArgs e)
+    {
+        if (runCts is not null) { runCts.Cancel(); return; }     // a second click stops it
+        runCts = new CancellationTokenSource();
+        RunBtn.Content = "Stop";
+        WorkLog.Text = "";
+        try { await Baldrick.RunWorkerAsync(AppendLog, runCts.Token); }
+        finally
+        {
+            runCts.Dispose(); runCts = null;
+            RunBtn.Content = "Run Percy";
+            await RefreshWorkAsync();        // whatever it made is now waiting on you
+        }
+    }
+
+    void OpenApprovals_Click(object sender, RoutedEventArgs e) => Baldrick.OpenApprovalsInBrowser();
 
     int TagId(object sender) => (int)((Button)sender).Tag;
 

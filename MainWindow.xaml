@@ -24,8 +24,11 @@
       <TextBlock x:Name="Subhead" FontSize="13" Foreground="{StaticResource Muted}"/>
     </StackPanel>
 
+    <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+    <TabItem Header="Decisions">
+
     <!-- The queue -->
-    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
       <StackPanel>
         <ItemsControl x:Name="QueueList">
           <ItemsControl.ItemTemplate>
@@ -86,6 +89,59 @@
         </Border>
       </StackPanel>
     </ScrollViewer>
+
+    </TabItem>
+
+    <!-- Work: the production side. Percy Worker runs on this machine because the
+         GPU is here, so this launches and watches it rather than replacing it. -->
+    <TabItem Header="Work">
+      <Grid Margin="0,14,0,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Where things stand -->
+        <Border Grid.Row="0" Background="{StaticResource Panel}" BorderBrush="{StaticResource PanelEdge}"
+                BorderThickness="1" CornerRadius="10" Padding="18">
+          <StackPanel>
+            <TextBlock Text="Where things stand" FontSize="12" FontWeight="SemiBold"
+                       Foreground="{StaticResource Muted}" Margin="0,0,0,10"/>
+            <StackPanel Orientation="Horizontal">
+              <StackPanel Margin="0,0,34,0">
+                <TextBlock x:Name="StatAwaiting" Text="—" FontSize="26" FontWeight="SemiBold"/>
+                <TextBlock Text="waiting for you" FontSize="11.5" Foreground="{StaticResource Muted}"/>
+              </StackPanel>
+              <StackPanel Margin="0,0,34,0">
+                <TextBlock x:Name="StatComfy" Text="—" FontSize="26" FontWeight="SemiBold"/>
+                <TextBlock Text="the 5090" FontSize="11.5" Foreground="{StaticResource Muted}"/>
+              </StackPanel>
+            </StackPanel>
+            <TextBlock x:Name="WorkError" FontSize="11.5" Foreground="#E05A5A"
+                       Margin="0,10,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
+          </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,14,0,10">
+          <Button x:Name="RunBtn" Content="Run Percy" Style="{StaticResource Action}" Click="Run_Click"/>
+          <Button Content="Approvals in browser" Style="{StaticResource Action}"
+                  Click="OpenApprovals_Click" Margin="8,0,0,0"/>
+          <Button Content="Refresh" Style="{StaticResource Action}" Click="RefreshWork_Click" Margin="8,0,0,0"/>
+        </StackPanel>
+
+        <!-- What the worker is saying, as it says it -->
+        <Border Grid.Row="2" Background="#0E1116" BorderBrush="{StaticResource PanelEdge}"
+                BorderThickness="1" CornerRadius="10" Padding="14">
+          <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+            <TextBlock x:Name="WorkLog" FontFamily="Consolas" FontSize="12"
+                       Foreground="#9BA3B0" TextWrapping="Wrap"
+                       Text="Percy hasn't run yet. It asks Baldrick for local jobs, makes them on the 5090, uploads them and sends them to the approval queue — then stops."/>
+          </ScrollViewer>
+        </Border>
+      </Grid>
+    </TabItem>
+    </TabControl>
 
     <!-- Footer -->
     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
