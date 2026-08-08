@@ -75,8 +75,165 @@ public sealed class Store
                 key   TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+
+            -- The methods map (SYSTEM-SPEC.md): HOW each kind of thing is made.
+            -- Percy Worker reads this table to dispatch; the Methods tab shows it.
+            -- This is the knowledge that used to be buried in percy_worker.py.
+            CREATE TABLE IF NOT EXISTS methods (
+                method_key    TEXT PRIMARY KEY,
+                aliases       TEXT NOT NULL DEFAULT '',
+                label         TEXT NOT NULL,
+                engine        TEXT NOT NULL,
+                workflow_file TEXT NOT NULL DEFAULT '',
+                injections    TEXT NOT NULL DEFAULT '{}',
+                steps         TEXT NOT NULL DEFAULT '',
+                settings      TEXT NOT NULL DEFAULT '{}',
+                notes         TEXT NOT NULL DEFAULT '',
+                enabled       INTEGER NOT NULL DEFAULT 1,
+                updated_at    TEXT NOT NULL
+            );
             """);
         SeedRules(c);
+        SeedMethods(c);
+    }
+
+    // ── Methods: the map of HOW things are made ─────────────────────────────
+    // Seeded once with the truth as of 2026-08-08 (extracted from percy_worker.py
+    // when the knowledge moved out of code). After that, this table is the truth
+    // and the app is where it gets edited.
+    static void SeedMethods(SqliteConnection c)
+    {
+        using (var check = c.CreateCommand())
+        {
+            check.CommandText = "SELECT COUNT(*) FROM methods";
+            if (Convert.ToInt64(check.ExecuteScalar()) > 0) return;
+        }
+
+        const string wfRoot = @"C:\ComfyUI\ComfyUI\user\default\workflows\baldrick\";
+        (string key, string aliases, string label, string engine, string wf, string inj, string steps, string settings, string notes)[] seed =
+        [
+            ("zimage_lora_still", "character_still",
+             "Character still — her own LoRA on Z-Image",
+             "local:comfy",
+             wfRoot + @"percy\zimage-character-still-v001.api.json",
+             """{"2.inputs.lora_name":"lora.name","2.inputs.strength_model":"lora.strength","3.inputs.shift":"sampler.shift","5.inputs.text":"prompt","7.inputs.width":"width","7.inputs.height":"height","9.inputs.seed":"seed","9.inputs.steps":"sampler.steps","9.inputs.cfg":"sampler.cfg","9.inputs.sampler_name":"sampler.sampler","9.inputs.scheduler":"sampler.scheduler","11.inputs.filename_prefix":"prefix"}""",
+             "jpeg,collect",
+             "{}",
+             "Proven on Lucy's channel/site shots and Erin's self-test. A new character = a Baldrick recipe row naming her LoRA + trigger — no change here."),
+
+            ("product_ugc_qwen", "ugc_apparel",
+             "Person wearing the real garment — Qwen edit",
+             "local:comfy",
+             wfRoot + @"percy\qwen-product-ugc-v001.api.json",
+             """{"5.inputs.image":"source_image","6.inputs.prompt":"prompt","7.inputs.prompt":"negative","8.inputs.width":"width","8.inputs.height":"height","9.inputs.seed":"seed","11.inputs.filename_prefix":"prefix"}""",
+             "jpeg,collect",
+             "{}",
+             "The 8Ball recipe: real product photo as image1, 20 steps cfg 2.5, deliberately NOT the 4-step Lightning LoRA (reads as an advert)."),
+
+            ("birefnet_cutout+price_overlay", "product_image",
+             "Plain product advert — real photo, price overlay",
+             "local:toolbox",
+             "",
+             "{}",
+             "cutout,hybrid_advert,jpeg,collect",
+             "{}",
+             "Deliberately NO AI render and NO prompt: re-rendering made products plasticky and dropped hardware (learned 2026-07-26). Real photo, always."),
+
+            ("ugc_post", "scene+cutout",
+             "Product on a surface — SD3.5 scene + true-scale cutout",
+             "local:comfy+toolbox",
+             wfRoot + @"percy\sd35-ugc-scene-v001.api.json",
+             """{"6.inputs.text":"scene_prompt","3.inputs.seed":"seed","9.inputs.filename_prefix":"prefix"}""",
+             "ugc_composite,jpeg,collect",
+             """{"surfaces":{"Iron On Patch":[{"prompt":"candid close-up photograph of the back of a person wearing an ordinary everyday mid-blue indigo denim jacket, natural medium wash with soft fading, real cotton denim weave, visible seams and orange topstitching, soft natural daylight outdoors, softly blurred street background, photographic, authentic real jacket","scene_mm":280,"posx":0.5,"posy":0.52}]},"fallback":"birefnet_cutout+price_overlay"}""",
+             "Pin badges removed from UGC 2026-07-27 (Stephen): placement never convincing — they fall back to the plain advert. Surface prompts live in settings here, not in code."),
+
+            ("product_enhanced_advert", "",
+             "Enhanced advert — GPT Image 2 with the developed prompt",
+             "cloud:gpt-image-2",
+             "",
+             "{}",
+             "",
+             "{}",
+             "CLOUD route — no local worker exists. The developed prompt lives in the Baldrick recipe. Made the 32 JKB enhanced adverts. Runs agent-driven until a cloud worker is built."),
+
+            ("capable_model_simple_prompt", "",
+             "Infographic — capable cloud model, simple purpose prompt",
+             "cloud:gpt-image-2",
+             "",
+             "{}",
+             "",
+             "{}",
+             "CLOUD route — no local worker. Marked 'proven' in Baldrick because it was done by hand (the 6 JKB infographics); the worker cannot run it."),
+        ];
+
+        var now = DateTimeOffset.UtcNow.ToString("O");
+        foreach (var m in seed)
+            Exec(c, """
+                INSERT INTO methods (method_key, aliases, label, engine, workflow_file, injections, steps, settings, notes, enabled, updated_at)
+                VALUES ($k, $a, $l, $e, $w, $i, $s, $set, $n, 1, $t)
+                """, cmd =>
+            {
+                cmd.Parameters.AddWithValue("$k", m.key);
+                cmd.Parameters.AddWithValue("$a", m.aliases);
+                cmd.Parameters.AddWithValue("$l", m.label);
+                cmd.Parameters.AddWithValue("$e", m.engine);
+                cmd.Parameters.AddWithValue("$w", m.wf);
+                cmd.Parameters.AddWithValue("$i", m.inj);
+                cmd.Parameters.AddWithValue("$s", m.steps);
+                cmd.Parameters.AddWithValue("$set", m.settings);
+                cmd.Parameters.AddWithValue("$n", m.notes);
+                cmd.Parameters.AddWithValue("$t", now);
+            });
+    }
+
+    public List<MethodRow> Methods()
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = """
+            SELECT method_key, aliases, label, engine, workflow_file, injections, steps, settings, notes, enabled
+            FROM methods ORDER BY engine, method_key
+            """;
+        var list = new List<MethodRow>();
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add(new MethodRow
+            {
+                MethodKey = r.GetString(0), Aliases = r.GetString(1), Label = r.GetString(2),
+                Engine = r.GetString(3), WorkflowFile = r.GetString(4), Injections = r.GetString(5),
+                Steps = r.GetString(6), Settings = r.GetString(7), Notes = r.GetString(8),
+                Enabled = r.GetInt64(9) != 0,
+            });
+        return list;
+    }
+
+    public void SaveMethod(MethodRow m) =>
+        ExecOne("""
+            INSERT INTO methods (method_key, aliases, label, engine, workflow_file, injections, steps, settings, notes, enabled, updated_at)
+            VALUES ($k, $a, $l, $e, $w, $i, $s, $set, $n, $en, $t)
+            ON CONFLICT(method_key) DO UPDATE SET
+                aliases=$a, label=$l, engine=$e, workflow_file=$w, injections=$i,
+                steps=$s, settings=$set, notes=$n, enabled=$en, updated_at=$t
+            """, cmd =>
+        {
+            cmd.Parameters.AddWithValue("$k", m.MethodKey);
+            cmd.Parameters.AddWithValue("$a", m.Aliases);
+            cmd.Parameters.AddWithValue("$l", m.Label);
+            cmd.Parameters.AddWithValue("$e", m.Engine);
+            cmd.Parameters.AddWithValue("$w", m.WorkflowFile);
+            cmd.Parameters.AddWithValue("$i", m.Injections);
+            cmd.Parameters.AddWithValue("$s", m.Steps);
+            cmd.Parameters.AddWithValue("$set", m.Settings);
+            cmd.Parameters.AddWithValue("$n", m.Notes);
+            cmd.Parameters.AddWithValue("$en", m.Enabled ? 1 : 0);
+            cmd.Parameters.AddWithValue("$t", DateTimeOffset.UtcNow.ToString("O"));
+        });
+
+    void ExecOne(string sql, Action<SqliteCommand> bind)
+    {
+        using var c = Open();
+        Exec(c, sql, bind);
     }
 
     static void Exec(SqliteConnection c, string sql, Action<SqliteCommand>? bind = null)
@@ -273,4 +430,20 @@ public sealed record QueueItem(
         var t => $"{(int)t.TotalDays}d ago"
     };
     public bool HasLink => !string.IsNullOrWhiteSpace(Link);
+}
+
+/// <summary>One row of the methods map — HOW one kind of thing is made.
+/// Mutable on purpose: the Methods tab edits these in a grid and saves back.</summary>
+public sealed class MethodRow
+{
+    public string MethodKey { get; set; } = "";
+    public string Aliases { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Engine { get; set; } = "";
+    public string WorkflowFile { get; set; } = "";
+    public string Injections { get; set; } = "{}";
+    public string Steps { get; set; } = "";
+    public string Settings { get; set; } = "{}";
+    public string Notes { get; set; } = "";
+    public bool Enabled { get; set; } = true;
 }

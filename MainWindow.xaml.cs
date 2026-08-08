@@ -12,7 +12,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += async (_, _) => { Refresh(); await RefreshWorkAsync(); };
+        Loaded += async (_, _) => { Refresh(); LoadMethods(); await RefreshWorkAsync(); };
     }
 
     /// <summary>A view row — the record plus the few things XAML needs to draw it.</summary>
@@ -113,6 +113,35 @@ public partial class MainWindow : Window
     }
 
     void OpenApprovals_Click(object sender, RoutedEventArgs e) => Baldrick.OpenApprovalsInBrowser();
+
+    // ── Methods tab ─────────────────────────────────────────────────────────
+    // The grid edits the same table Percy Worker dispatches from. Save writes
+    // straight back; there is no second copy anywhere to drift.
+
+    System.Collections.ObjectModel.ObservableCollection<MethodRow> methodRows = [];
+
+    void LoadMethods()
+    {
+        methodRows = new(Store.Methods());
+        MethodsGrid.ItemsSource = methodRows;
+        MethodsHint.Text = $"{methodRows.Count} methods · this table is what the worker runs · db: {Store.DatabasePath}";
+    }
+
+    void ReloadMethods_Click(object sender, RoutedEventArgs e) => LoadMethods();
+
+    void SaveMethods_Click(object sender, RoutedEventArgs e)
+    {
+        MethodsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
+        int saved = 0;
+        foreach (var m in methodRows)
+        {
+            if (string.IsNullOrWhiteSpace(m.MethodKey)) continue;   // a blank new-row line
+            Store.SaveMethod(m);
+            saved++;
+        }
+        LoadMethods();
+        MethodsHint.Text = $"saved {saved} methods · db: {Store.DatabasePath}";
+    }
 
     int TagId(object sender) => (int)((Button)sender).Tag;
 

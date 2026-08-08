@@ -141,6 +141,49 @@
         </Border>
       </Grid>
     </TabItem>
+
+    <!-- Methods: THE map — how each kind of thing is made. This grid IS the
+         knowledge; Percy Worker reads this same table to dispatch. Editing a
+         row here changes how the worker behaves, no code involved. -->
+    <TabItem Header="Methods">
+      <Grid Margin="0,14,0,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+          <Button Content="Save changes" Style="{StaticResource Action}" Click="SaveMethods_Click"/>
+          <Button Content="Reload" Style="{StaticResource Action}" Click="ReloadMethods_Click" Margin="8,0,0,0"/>
+          <TextBlock x:Name="MethodsHint" VerticalAlignment="Center" FontSize="12"
+                     Foreground="{StaticResource Muted}" Margin="12,0,0,0"
+                     Text="How each kind of thing is made. New method = copy a workflow file, add a row."/>
+        </StackPanel>
+
+        <DataGrid x:Name="MethodsGrid" Grid.Row="1"
+                  AutoGenerateColumns="False" CanUserAddRows="True"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                  Background="{StaticResource Bg}" Foreground="{StaticResource Ink}"
+                  RowBackground="{StaticResource Panel}" AlternatingRowBackground="#20242B"
+                  BorderBrush="{StaticResource PanelEdge}" BorderThickness="1"
+                  HorizontalGridLinesBrush="{StaticResource PanelEdge}"
+                  FontSize="12" ColumnWidth="Auto"
+                  HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+          <DataGrid.Columns>
+            <DataGridCheckBoxColumn Header="On" Binding="{Binding Enabled}" Width="36"/>
+            <DataGridTextColumn Header="Method" Binding="{Binding MethodKey}" Width="200"/>
+            <DataGridTextColumn Header="Also answers to" Binding="{Binding Aliases}" Width="130"/>
+            <DataGridTextColumn Header="What it makes" Binding="{Binding Label}" Width="240"/>
+            <DataGridTextColumn Header="Engine" Binding="{Binding Engine}" Width="130"/>
+            <DataGridTextColumn Header="Workflow file" Binding="{Binding WorkflowFile}" Width="300"/>
+            <DataGridTextColumn Header="Finishing steps" Binding="{Binding Steps}" Width="180"/>
+            <DataGridTextColumn Header="Injections (job value → workflow slot)" Binding="{Binding Injections}" Width="340"/>
+            <DataGridTextColumn Header="Settings" Binding="{Binding Settings}" Width="220"/>
+            <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="380"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Grid>
+    </TabItem>
     </TabControl>
 
     <!-- Footer -->
