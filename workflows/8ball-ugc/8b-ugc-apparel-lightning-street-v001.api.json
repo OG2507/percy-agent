@@ -1,0 +1,16 @@
+{
+  "prompt": {
+    "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "qwen_image_edit_2511_fp8mixed.safetensors", "weight_dtype": "default"}},
+    "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors", "type": "qwen_image", "device": "default"}},
+    "3": {"class_type": "VAELoader", "inputs": {"vae_name": "qwen_image_vae.safetensors"}},
+    "4": {"class_type": "LoraLoaderModelOnly", "inputs": {"model": ["1", 0], "lora_name": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors", "strength_model": 1.0}},
+    "12": {"class_type": "ModelSamplingAuraFlow", "inputs": {"model": ["4", 0], "shift": 3.1}},
+    "5": {"class_type": "LoadImage", "inputs": {"image": "weyland-yutani-original.jpg"}},
+    "6": {"class_type": "TextEncodeQwenImageEditPlus", "inputs": {"clip": ["2", 0], "prompt": "Using the t-shirt from image 1 but recoloured to dark navy blue fabric, create a candid UGC-style photo: a very attractive young man in his mid 20s with an athletic build wearing this t-shirt in navy blue, casual natural pose, slight smile, shot on a phone camera, golden hour daylight outdoors in a city street, realistic skin texture, authentic instagram candid style. The t-shirt fabric colour is dark navy blue, and the print must be preserved exactly: WEYLAND-YUTANI CORP text, distressed yellow W logo with white triangles, and BUILDING BETTER WORLDS text below.", "vae": ["3", 0], "image1": ["5", 0]}},
+    "7": {"class_type": "TextEncodeQwenImageEditPlus", "inputs": {"clip": ["2", 0], "prompt": "", "vae": ["3", 0], "image1": ["5", 0]}},
+    "8": {"class_type": "EmptySD3LatentImage", "inputs": {"width": 1024, "height": 1360, "batch_size": 1}},
+    "9": {"class_type": "KSampler", "inputs": {"model": ["12", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["8", 0], "seed": 88445566, "steps": 4, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0}},
+    "10": {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["3", 0]}},
+    "11": {"class_type": "SaveImage", "inputs": {"images": ["10", 0], "filename_prefix": "weyland_ugc_navy"}}
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "UGC scene backdrop: SD 3.5 Large photoreal close-up surface, 896x1152 (4:5). Extracted 2026-08-08 from percy_worker.sd35_scene(). The true-scale product cutout is composited on top by the ugc_composite finishing step. Scene prompt comes from the method's settings (surfaces per product type), injected per-job.",
+  "prompt": {
+    "4":  {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "sd3.5_large.safetensors"}},
+    "20": {"class_type": "TripleCLIPLoader", "inputs": {"clip_name1": "clip_g.safetensors", "clip_name2": "clip_l.safetensors", "clip_name3": "t5xxl_fp16.safetensors"}},
+    "5":  {"class_type": "EmptySD3LatentImage", "inputs": {"width": 896, "height": 1152, "batch_size": 1}},
+    "6":  {"class_type": "CLIPTextEncode", "inputs": {"text": "INJECTED", "clip": ["20", 0]}},
+    "7":  {"class_type": "CLIPTextEncode", "inputs": {"text": "cartoon, illustration, cgi, 3d render, plastic, deformed, blurry, low quality, watermark, text, existing badge, existing pin, existing patch, face, eyes, cluttered", "clip": ["20", 0]}},
+    "3":  {"class_type": "KSampler", "inputs": {"seed": 0, "steps": 30, "cfg": 4.5, "sampler_name": "dpmpp_2m", "scheduler": "sgm_uniform", "denoise": 1.0, "model": ["4", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["5", 0]}},
+    "8":  {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
+    "9":  {"class_type": "SaveImage", "inputs": {"filename_prefix": "percy", "images": ["8", 0]}}
+  }
+}

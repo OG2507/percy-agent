@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "name": "TBR Badge Clay Workshop v002",
+    "recipe": "tbr_badge_clay_workshop",
+    "version": "v002",
+    "input_node": "1",
+    "motion_node": "2",
+    "save_node": "4"
+  },
+  "prompt": {
+    "1": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "BadgeMotion/11949010_clear.png"
+      }
+    },
+    "2": {
+      "class_type": "BaldrickBadgeClayWorkshopV002",
+      "inputs": {
+        "badge_image": ["1", 0],
+        "transparent_mask": ["1", 1],
+        "clay_colour": "#D8893B",
+        "hand_colour": "#B96349",
+        "tool_colour": "#84563C",
+        "background_colour": "#E8D7C2",
+        "preserve_badge_colours": true,
+        "canvas_width": 576,
+        "canvas_height": 1024,
+        "badge_width_percent": 62.0,
+        "duration_seconds": 6.0,
+        "fps": 24,
+        "stop_motion_fps": 12,
+        "seed": 11949010
+      }
+    },
+    "3": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "images": ["2", 0],
+        "fps": ["2", 1],
+        "bit_depth": 8
+      }
+    },
+    "4": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "video": ["3", 0],
+        "filename_prefix": "BadgeMotion/TBR/11949010_clay_workshop_v002",
+        "format": "mp4",
+        "codec": "h264"
+      }
+    }
+  }
+}

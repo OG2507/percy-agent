@@ -1,0 +1,16 @@
+{
+  "_comment": "Person wearing the real garment: Qwen-Image-Edit 2511 with the product photo as image1. Extracted 2026-08-08 from percy_worker.product_ugc_qwen() — the settings proven for 8Ball (20 steps, cfg 2.5, deliberately NOT the Lightning LoRA). Injection slots set per-job by the generic runner from the methods table.",
+  "prompt": {
+    "1":  {"class_type": "UNETLoader", "inputs": {"unet_name": "qwen_image_edit_2511_fp8mixed.safetensors", "weight_dtype": "default"}},
+    "2":  {"class_type": "CLIPLoader", "inputs": {"clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors", "type": "qwen_image", "device": "default"}},
+    "3":  {"class_type": "VAELoader", "inputs": {"vae_name": "qwen_image_vae.safetensors"}},
+    "12": {"class_type": "ModelSamplingAuraFlow", "inputs": {"model": ["1", 0], "shift": 3.1}},
+    "5":  {"class_type": "LoadImage", "inputs": {"image": "INJECTED"}},
+    "6":  {"class_type": "TextEncodeQwenImageEditPlus", "inputs": {"prompt": "INJECTED", "clip": ["2", 0], "vae": ["3", 0], "image1": ["5", 0]}},
+    "7":  {"class_type": "TextEncodeQwenImageEditPlus", "inputs": {"prompt": "airbrushed skin, studio lighting, professional photoshoot, retouched, glossy, plastic skin, oversaturated, cinematic bokeh, distorted print, warped text", "clip": ["2", 0], "vae": ["3", 0], "image1": ["5", 0]}},
+    "8":  {"class_type": "EmptySD3LatentImage", "inputs": {"width": 1200, "height": 1440, "batch_size": 1}},
+    "9":  {"class_type": "KSampler", "inputs": {"model": ["12", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["8", 0], "seed": 0, "steps": 20, "cfg": 2.5, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0}},
+    "10": {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["3", 0]}},
+    "11": {"class_type": "SaveImage", "inputs": {"filename_prefix": "percy", "images": ["10", 0]}}
+  }
+}
