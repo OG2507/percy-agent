@@ -184,6 +184,59 @@
         </DataGrid>
       </Grid>
     </TabItem>
+
+    <!-- Baldrick: the CONTROLLER view — Baldrick's jobs, here, because this
+         is the one queue. Approve/Reject finished runs, Retry/Cancel failures,
+         Open jumps to the workbench page for the detail. Polls every 60s. -->
+    <TabItem Header="Baldrick">
+      <Grid Margin="0,14,0,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+          <Button Content="Approve" Style="{StaticResource Action}" Click="BaldrickApprove_Click"/>
+          <Button Content="Reject" Style="{StaticResource Action}" Click="BaldrickReject_Click" Margin="8,0,0,0"/>
+          <TextBox x:Name="BaldrickReason" Width="220" Margin="8,0,0,0" FontSize="12"
+                   Background="{StaticResource Panel}" Foreground="{StaticResource Ink}"
+                   BorderBrush="{StaticResource PanelEdge}" VerticalContentAlignment="Center"
+                   ToolTip="Reason — required for Reject, kept as the record"/>
+          <Button Content="Retry" Style="{StaticResource Action}" Click="BaldrickRetry_Click" Margin="16,0,0,0"/>
+          <Button Content="Cancel job" Style="{StaticResource Action}" Click="BaldrickCancel_Click" Margin="8,0,0,0"/>
+          <Button Content="Open in Baldrick" Style="{StaticResource Action}" Click="BaldrickOpen_Click" Margin="16,0,0,0"/>
+          <Button Content="Refresh" Style="{StaticResource Action}" Click="BaldrickRefresh_Click" Margin="8,0,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <TextBlock x:Name="BaldrickStatus" Grid.Row="0" FontSize="12"
+                     Foreground="{StaticResource Muted}" Margin="0,0,0,8"
+                     Text="Connecting to Baldrick…"/>
+          <DataGrid x:Name="BaldrickGrid" Grid.Row="1"
+                    AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                    SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                    Background="{StaticResource Bg}" Foreground="{StaticResource Ink}"
+                    RowBackground="{StaticResource Panel}" AlternatingRowBackground="#20242B"
+                    BorderBrush="{StaticResource PanelEdge}" BorderThickness="1"
+                    HorizontalGridLinesBrush="{StaticResource PanelEdge}"
+                    FontSize="12" ColumnWidth="Auto"
+                    HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="State" Binding="{Binding Kind}" Width="130"/>
+              <DataGridTextColumn Header="Process" Binding="{Binding Process}" Width="220"/>
+              <DataGridTextColumn Header="Client" Binding="{Binding Client}" Width="70"/>
+              <DataGridTextColumn Header="Queued" Binding="{Binding QueuedAt}" Width="160"/>
+              <DataGridTextColumn Header="Can do" Binding="{Binding Actions}" Width="140"/>
+              <DataGridTextColumn Header="Error" Binding="{Binding Error}" Width="380"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Grid>
+      </Grid>
+    </TabItem>
     </TabControl>
 
     <!-- Footer -->

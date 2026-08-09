@@ -187,6 +187,33 @@ public sealed class Store
             });
     }
 
+    // Simple KV settings. Used by the Baldrick tab for its endpoint + secret
+    // location (defaults seeded on first read so the rows are editable in the db).
+    public string Setting(string key, string fallback = "")
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "SELECT value FROM settings WHERE key = $k";
+        cmd.Parameters.AddWithValue("$k", key);
+        var v = cmd.ExecuteScalar() as string;
+        if (v is null && fallback.Length > 0)
+        {
+            SaveSetting(key, fallback);
+            return fallback;
+        }
+        return v ?? "";
+    }
+
+    public void SaveSetting(string key, string value)
+    {
+        using var c = Open();
+        using var cmd = c.CreateCommand();
+        cmd.CommandText = "INSERT INTO settings (key, value) VALUES ($k, $v) ON CONFLICT(key) DO UPDATE SET value = $v";
+        cmd.Parameters.AddWithValue("$k", key);
+        cmd.Parameters.AddWithValue("$v", value);
+        cmd.ExecuteNonQuery();
+    }
+
     public List<MethodRow> Methods()
     {
         using var c = Open();
