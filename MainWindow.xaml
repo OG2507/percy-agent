@@ -18,7 +18,7 @@
       <StackPanel Orientation="Horizontal">
         <TextBlock Text="Percy Agent" FontSize="13" Foreground="{StaticResource Muted}"
                    FontWeight="SemiBold" Margin="0,0,10,0"/>
-        <TextBlock x:Name="DbHint" FontSize="11" Foreground="#5C6472" VerticalAlignment="Center"/>
+        <TextBlock x:Name="DbHint" FontSize="13" Foreground="#5C6472" VerticalAlignment="Center"/>
       </StackPanel>
       <TextBlock x:Name="Headline" FontSize="30" FontWeight="SemiBold" Margin="0,6,0,2"/>
       <TextBlock x:Name="Subhead" FontSize="13" Foreground="{StaticResource Muted}"/>
@@ -51,11 +51,11 @@
 
                   <StackPanel Grid.Column="1">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                      <TextBlock Text="{Binding Sender}" FontSize="12" Foreground="{StaticResource Muted}"/>
-                      <TextBlock Text="  ·  " Foreground="#4A5160" FontSize="12"/>
-                      <TextBlock Text="{Binding Source}" FontSize="12" Foreground="#5C6472"/>
-                      <TextBlock Text="  ·  " Foreground="#4A5160" FontSize="12"/>
-                      <TextBlock Text="{Binding Age}" FontSize="12" Foreground="#5C6472"/>
+                      <TextBlock Text="{Binding Sender}" FontSize="15" Foreground="{StaticResource Muted}"/>
+                      <TextBlock Text="  ·  " Foreground="#4A5160" FontSize="15"/>
+                      <TextBlock Text="{Binding Source}" FontSize="15" Foreground="#5C6472"/>
+                      <TextBlock Text="  ·  " Foreground="#4A5160" FontSize="15"/>
+                      <TextBlock Text="{Binding Age}" FontSize="15" Foreground="#5C6472"/>
                     </StackPanel>
                     <TextBlock Text="{Binding Subject}" FontSize="15.5" FontWeight="SemiBold"
                                TextWrapping="Wrap" Margin="0,0,14,0"/>
@@ -106,7 +106,7 @@
         <Border Grid.Row="0" Background="{StaticResource Panel}" BorderBrush="{StaticResource PanelEdge}"
                 BorderThickness="1" CornerRadius="10" Padding="18">
           <StackPanel>
-            <TextBlock Text="Where things stand" FontSize="12" FontWeight="SemiBold"
+            <TextBlock Text="Where things stand" FontSize="15" FontWeight="SemiBold"
                        Foreground="{StaticResource Muted}" Margin="0,0,0,10"/>
             <StackPanel Orientation="Horizontal">
               <StackPanel Margin="0,0,34,0">
@@ -134,7 +134,7 @@
         <Border Grid.Row="2" Background="#0E1116" BorderBrush="{StaticResource PanelEdge}"
                 BorderThickness="1" CornerRadius="10" Padding="14">
           <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
-            <TextBlock x:Name="WorkLog" FontFamily="Consolas" FontSize="12"
+            <TextBlock x:Name="WorkLog" FontFamily="Consolas" FontSize="15"
                        Foreground="#9BA3B0" TextWrapping="Wrap"
                        Text="Percy hasn't run yet. It asks Baldrick for local jobs, makes them on the 5090, uploads them and sends them to the approval queue — then stops."/>
           </ScrollViewer>
@@ -155,7 +155,7 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
           <Button Content="Save changes" Style="{StaticResource Action}" Click="SaveMethods_Click"/>
           <Button Content="Reload" Style="{StaticResource Action}" Click="ReloadMethods_Click" Margin="8,0,0,0"/>
-          <TextBlock x:Name="MethodsHint" VerticalAlignment="Center" FontSize="12"
+          <TextBlock x:Name="MethodsHint" VerticalAlignment="Center" FontSize="15"
                      Foreground="{StaticResource Muted}" Margin="12,0,0,0"
                      Text="How each kind of thing is made. New method = copy a workflow file, add a row."/>
         </StackPanel>
@@ -167,7 +167,7 @@
                   RowBackground="{StaticResource Panel}" AlternatingRowBackground="#20242B"
                   BorderBrush="{StaticResource PanelEdge}" BorderThickness="1"
                   HorizontalGridLinesBrush="{StaticResource PanelEdge}"
-                  FontSize="12" ColumnWidth="Auto"
+                  FontSize="15" ColumnWidth="Auto"
                   HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <DataGrid.Columns>
             <DataGridCheckBoxColumn Header="On" Binding="{Binding Enabled}" Width="36"/>
@@ -198,7 +198,7 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
           <Button Content="Approve" Style="{StaticResource Action}" Click="BaldrickApprove_Click"/>
           <Button Content="Reject" Style="{StaticResource Action}" Click="BaldrickReject_Click" Margin="8,0,0,0"/>
-          <TextBox x:Name="BaldrickReason" Width="220" Margin="8,0,0,0" FontSize="12"
+          <TextBox x:Name="BaldrickReason" Width="220" Margin="8,0,0,0" FontSize="15"
                    Background="{StaticResource Panel}" Foreground="{StaticResource Ink}"
                    BorderBrush="{StaticResource PanelEdge}" VerticalContentAlignment="Center"
                    ToolTip="Reason — required for Reject, kept as the record"/>
@@ -213,7 +213,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
           </Grid.RowDefinitions>
-          <TextBlock x:Name="BaldrickStatus" Grid.Row="0" FontSize="12"
+          <TextBlock x:Name="BaldrickStatus" Grid.Row="0" FontSize="15"
                      Foreground="{StaticResource Muted}" Margin="0,0,0,8"
                      Text="Connecting to Baldrick…"/>
           <DataGrid x:Name="BaldrickGrid" Grid.Row="1"
@@ -223,7 +223,7 @@
                     RowBackground="{StaticResource Panel}" AlternatingRowBackground="#20242B"
                     BorderBrush="{StaticResource PanelEdge}" BorderThickness="1"
                     HorizontalGridLinesBrush="{StaticResource PanelEdge}"
-                    FontSize="12" ColumnWidth="Auto"
+                    FontSize="15" ColumnWidth="Auto"
                     HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <DataGrid.Columns>
               <DataGridTextColumn Header="State" Binding="{Binding Kind}" Width="120"/>
@@ -243,7 +243,7 @@
     <!-- Footer -->
     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
       <Button Content="Refresh" Style="{StaticResource Action}" Click="Refresh_Click"/>
-      <TextBlock x:Name="Footer" VerticalAlignment="Center" FontSize="12"
+      <TextBlock x:Name="Footer" VerticalAlignment="Center" FontSize="15"
                  Foreground="{StaticResource Muted}" Margin="8,0,0,0"/>
     </StackPanel>
   </Grid>
