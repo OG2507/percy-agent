@@ -77,10 +77,79 @@ public partial class MainWindow
                     Actions = string.Join(",", it.GetProperty("actions").EnumerateArray().Select(a => a.GetString())),
                 });
             }
+            var chips = new List<string>();
+
+            // Production batches: the render pipeline per client, straight from the
+            // system (Stephen 2026-08-11: Percy watches renders, not a chat window).
+            if (doc.RootElement.TryGetProperty("production", out var prod))
+            {
+                if (prod.TryGetProperty("batches", out var batches))
+                {
+                    foreach (var b in batches.EnumerateObject())
+                    {
+                        int V(string k) => b.Value.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : 0;
+                        var moving = b.Value.TryGetProperty("latestMove", out var lm) && lm.ValueKind == JsonValueKind.String
+                            && DateTime.TryParse(lm.GetString(), out var mv)
+                            ? (DateTime.UtcNow - mv.ToUniversalTime()).TotalMinutes < 10 ? "rendering" : $"stalled since {mv:HH:mm}"
+                            : "idle";
+                        chips.Add($"{b.Name} renders: {V("pending")} queued, {V("awaiting_approval")} to review ({moving})");
+                    }
+                }
+                // The line-up itself: what's rendering and what's next, each row
+                // named (product · colour) with the workflow it will run through
+                // (format → method [recipe status]) so queue and machinery are
+                // visibly matched — a count alone is not a queue.
+                if (prod.TryGetProperty("lineup", out var lineup))
+                {
+                    // Join each job's METHOD to the local methods map so the
+                    // Workflow column shows the actual file on this machine —
+                    // the job and the thing that will run it, side by side.
+                    var methodFiles = Store.Methods().ToDictionary(m => m.MethodKey, m => m.WorkflowFile);
+                    foreach (var l in lineup.EnumerateArray())
+                    {
+                        var st = l.GetProperty("status").GetString() ?? "";
+                        var method = l.TryGetProperty("method", out var me) && me.ValueKind == JsonValueKind.String ? me.GetString() ?? "" : "";
+                        var recipeStatus = l.TryGetProperty("recipeStatus", out var rs) && rs.ValueKind == JsonValueKind.String ? rs.GetString() ?? "" : "";
+                        var file = method.Length > 0 && methodFiles.TryGetValue(method, out var wf) && !string.IsNullOrEmpty(wf) ? wf : "";
+                        var workflow = method.Length == 0
+                            ? "NO METHOD — job can never render"
+                            : $"{method} → {(file.Length > 0 ? file : "(no workflow file — toolbox steps only)")}" +
+                              (recipeStatus.Length > 0 && recipeStatus != "proven" ? $" [{recipeStatus}]" : "");
+                        jobs.Add(new BaldrickJob
+                        {
+                            Id = l.GetProperty("id").GetString() ?? "",
+                            Kind = st == "generating" ? "rendering NOW" : "render queued",
+                            Process = l.GetProperty("item").GetString() ?? "",
+                            Workflow = workflow,
+                            Client = l.GetProperty("client").GetString() ?? "",
+                            QueuedAt = l.TryGetProperty("startedAt", out var sa) && sa.ValueKind == JsonValueKind.String ? sa.GetString() ?? "" : "",
+                            Link = "/produce",
+                            Actions = "",
+                        });
+                    }
+                }
+                if (prod.TryGetProperty("deadJobs", out var dead))
+                {
+                    foreach (var d in dead.EnumerateArray())
+                    {
+                        jobs.Add(new BaldrickJob
+                        {
+                            Id = d.GetProperty("id").GetString() ?? "",
+                            Kind = "production-failed",
+                            Process = "render (3 strikes)",
+                            Client = d.GetProperty("client").GetString() ?? "",
+                            QueuedAt = d.TryGetProperty("failedAt", out var fa) ? fa.GetString() ?? "" : "",
+                            Error = d.TryGetProperty("error", out var de) && de.ValueKind == JsonValueKind.String ? de.GetString() ?? "" : "",
+                            Link = "/produce",
+                            Actions = "retry,cancel", // mapped to retry-production / abandon-production on send
+                        });
+                    }
+                }
+            }
+
             _baldrickJobs = jobs;
             BaldrickGrid.ItemsSource = jobs;
 
-            var chips = new List<string>();
             foreach (var q in doc.RootElement.GetProperty("queues").EnumerateArray())
             {
                 var n = q.GetProperty("count").GetInt32();
@@ -117,12 +186,17 @@ public partial class MainWindow
             BaldrickStatus.Text = "A rejection owes a reason — type it in the reason box.";
             return;
         }
+        // A production-failed row reuses the Retry/Cancel buttons but speaks the
+        // production verbs to the API (cancel = abandon, reason box respected).
+        var sendAction = job.Kind == "production-failed"
+            ? (action == "retry" ? "retry-production" : "abandon-production")
+            : action;
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Post, BaldrickUrl + "/api/v1/percy/act");
             req.Headers.Add("x-production-secret", BaldrickSecret());
             req.Content = new StringContent(
-                JsonSerializer.Serialize(new { runId = job.Id, action, note }),
+                JsonSerializer.Serialize(new { runId = job.Id, action = sendAction, note }),
                 Encoding.UTF8, "application/json");
             using var res = await BaldrickHttp.SendAsync(req);
             var body = await res.Content.ReadAsStringAsync();
@@ -156,6 +230,7 @@ public class BaldrickJob
     public string Id { get; set; } = "";
     public string Kind { get; set; } = "";
     public string Process { get; set; } = "";
+    public string Workflow { get; set; } = "";
     public string Client { get; set; } = "";
     public string QueuedAt { get; set; } = "";
     public string Error { get; set; } = "";

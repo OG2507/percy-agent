@@ -226,12 +226,13 @@
                     FontSize="12" ColumnWidth="Auto"
                     HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <DataGrid.Columns>
-              <DataGridTextColumn Header="State" Binding="{Binding Kind}" Width="130"/>
-              <DataGridTextColumn Header="Process" Binding="{Binding Process}" Width="220"/>
-              <DataGridTextColumn Header="Client" Binding="{Binding Client}" Width="70"/>
-              <DataGridTextColumn Header="Queued" Binding="{Binding QueuedAt}" Width="160"/>
-              <DataGridTextColumn Header="Can do" Binding="{Binding Actions}" Width="140"/>
-              <DataGridTextColumn Header="Error" Binding="{Binding Error}" Width="380"/>
+              <DataGridTextColumn Header="State" Binding="{Binding Kind}" Width="120"/>
+              <DataGridTextColumn Header="Job" Binding="{Binding Process}" Width="300"/>
+              <DataGridTextColumn Header="Workflow" Binding="{Binding Workflow}" Width="300"/>
+              <DataGridTextColumn Header="Client" Binding="{Binding Client}" Width="60"/>
+              <DataGridTextColumn Header="Queued" Binding="{Binding QueuedAt}" Width="150"/>
+              <DataGridTextColumn Header="Can do" Binding="{Binding Actions}" Width="120"/>
+              <DataGridTextColumn Header="Error" Binding="{Binding Error}" Width="360"/>
             </DataGrid.Columns>
           </DataGrid>
         </Grid>
