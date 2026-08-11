@@ -198,6 +198,25 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,10">
+          <!-- THE RUNNER BAR: what Percy is doing, and the two buttons that
+               start and stop it. Play runs the one queue; Pause lets it
+               finish the job it is on and then stop. -->
+          <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource PanelEdge}"
+                  BorderThickness="1" CornerRadius="6" Padding="14,11" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock x:Name="RunnerState" FontSize="15" FontWeight="SemiBold"
+                         VerticalAlignment="Center" Text="Percy: checking…"/>
+              <TextBlock x:Name="RunnerDoing" FontSize="13" Foreground="{StaticResource Muted}"
+                         VerticalAlignment="Center" Margin="14,0,0,0" Text=""/>
+              <Button x:Name="RunnerPlay" Content="▶  Play" Style="{StaticResource Action}"
+                      Margin="20,0,0,0" Click="RunnerPlay_Click"
+                      ToolTip="Start Percy. It works job after job until there is nothing left."/>
+              <Button x:Name="RunnerPause" Content="❚❚  Pause" Style="{StaticResource Action}"
+                      Margin="8,0,0,0" Click="RunnerPause_Click"
+                      ToolTip="Percy finishes the job it is on, reports it, then stops."/>
+            </StackPanel>
+          </Border>
+
           <TextBlock x:Name="BaldrickStatus" FontSize="14" Foreground="{StaticResource Muted}"
                      Margin="0,0,0,8" Text="Connecting to Baldrick…"/>
           <StackPanel Orientation="Horizontal">

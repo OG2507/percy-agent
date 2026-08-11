@@ -12,7 +12,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += async (_, _) => { Refresh(); LoadMethods(); StartBaldrickPolling(); await RefreshWorkAsync(); };
+        Loaded += async (_, _) => { Refresh(); LoadMethods(); StartBaldrickPolling(); StartRunnerWatch(); await RefreshWorkAsync(); };
     }
 
     /// <summary>A view row — the record plus the few things XAML needs to draw it.</summary>
