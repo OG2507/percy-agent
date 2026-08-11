@@ -79,18 +79,21 @@ public partial class MainWindow
                 {
                     int V(string k) => b.Value.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : 0;
                     var pending = V("pending"); var review = V("awaiting_approval"); var generating = V("generating"); var failed = V("failed");
-                    string state; SolidColorBrush brush;
-                    if (generating > 0) { state = "RENDERING"; brush = Brush("#E0B45A"); }
+                    string state; SolidColorBrush brush; string hint;
+                    if (generating > 0) { state = "RENDERING"; brush = Brush("#E0B45A"); hint = "The 5090 is working through the queue."; }
                     else if (b.Value.TryGetProperty("latestMove", out var lm) && lm.ValueKind == JsonValueKind.String
                              && DateTime.TryParse(lm.GetString(), out var mv)
-                             && (DateTime.UtcNow - mv.ToUniversalTime()).TotalMinutes < 10) { state = "MOVING"; brush = Brush("#4FC38A"); }
-                    else if (pending > 0) { state = "HELD"; brush = Brush("#9BA3B0"); }
-                    else { state = "QUIET"; brush = Brush("#4FC38A"); }
+                             && (DateTime.UtcNow - mv.ToUniversalTime()).TotalMinutes < 10) { state = "MOVING"; brush = Brush("#4FC38A"); hint = "Something moved in the last 10 minutes."; }
+                    else if (pending > 0) { state = "HELD"; brush = Brush("#9BA3B0"); hint = "Queued but not rendering — the worker isn't running (Stephen's order, or GPU busy). Jobs wait safely; they render when the worker next runs."; }
+                    else { state = "QUIET"; brush = Brush("#4FC38A"); hint = "Nothing waiting to render."; }
                     cards.Add(new BaldrickCard
                     {
                         Badge = state, BadgeBrush = brush,
                         Title = $"{b.Name} renders",
-                        Sub = $"{pending} queued · {generating} rendering · {review} waiting for your review" + (failed > 0 ? $" · {failed} failed" : ""),
+                        Sub = $"{pending} queued · {generating} rendering · {review} waiting for your review" + (failed > 0 ? $" · {failed} failed" : "") + "\n" + hint
+                              + (review > 0 ? "  →  Open goes to the approval queue." : ""),
+                        CanOpen = Visibility.Visible,
+                        Link = review > 0 ? "/produce/approvals" : "/produce",
                     });
                 }
             }
