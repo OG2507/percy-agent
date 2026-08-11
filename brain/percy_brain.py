@@ -137,4 +137,20 @@ if __name__ == "__main__":
         if "--speak" in sys.argv:
             speak(answer)
     else:
-        print(__doc__)
+        # No arguments = talk to Percy. Type a question, get an answer.
+        print("Percy here. Ask me anything about the operation (blank line to leave).")
+        while True:
+            try:
+                q = input("\nyou > ").strip()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if not q:
+                break
+            try:
+                answer = ask(q)
+            except Exception as e:
+                answer = f"Something's wrong on my side: {str(e)[:120]} (is ollama running?)"
+            print("\npercy > " + answer)
+            if speak(answer):
+                pass  # spoken too when the voice service is up and the GPU is free
+        print("Bye.")
