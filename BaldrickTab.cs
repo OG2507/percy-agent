@@ -8,31 +8,35 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace PercyAgent;
 
-// The Baldrick tab: Percy is the CONTROLLER for jobs (Stephen's design,
-// 2026-08-09). This polls Baldrick's /api/v1/percy/jobs (outbound only, the
-// worker's secret) and shows job state: queued / running / failed runs and
-// finished runs awaiting the YES, plus the decision-queue counts. Verbs:
-// Approve, Reject (reason required), Retry, Cancel, Open (deep link to the
-// workbench page). Baldrick is where the detail lives; this is where the
-// jobs live.
+// The Baldrick tab as CARDS (Stephen's design, 2026-08-11): one thing per
+// card, a badge, a sentence, buttons — the Decisions-tab pattern, never a
+// dense grid. Order: batch stories (what's happening) → needs-you (decide)
+// → rendering now → next up. Each render card shows its checklist progress
+// from the job row's step marks. Polls /api/v1/percy/jobs every 60s.
 public partial class MainWindow
 {
     static readonly HttpClient BaldrickHttp = new() { Timeout = TimeSpan.FromSeconds(20) };
     DispatcherTimer? _baldrickTimer;
-    List<BaldrickJob> _baldrickJobs = new();
 
     string BaldrickUrl => Store.Setting("baldrick_url", "https://baldrick.vslmedia.co.uk").TrimEnd('/');
+
+    static readonly string[] StepOrder = { "claimed", "rendered", "uploaded", "approved", "filed", "cropped" };
 
     string BaldrickSecret()
     {
         var path = Store.Setting("baldrick_secret_file",
-            @"C:\ComfyUI\ComfyUI\user\default\workflows\baldrick-tools\.worker_secret");
+            @"D:\ComfyUI-Data\baldrick\workflows\python\.worker_secret");
         try { return File.ReadAllText(path).Trim(); }
-        catch { return ""; }
+        catch
+        {
+            try { return File.ReadAllText(@"C:\ComfyUI\ComfyUI\user\default\workflows\baldrick-tools\.worker_secret").Trim(); }
+            catch { return ""; }
+        }
     }
 
     void StartBaldrickPolling()
@@ -42,6 +46,9 @@ public partial class MainWindow
         _baldrickTimer.Tick += async (_, _) => await RefreshBaldrickAsync();
         _baldrickTimer.Start();
     }
+
+    static SolidColorBrush Brush(string hex) =>
+        new((Color)ColorConverter.ConvertFromString(hex));
 
     async Task RefreshBaldrickAsync()
     {
@@ -62,105 +69,127 @@ public partial class MainWindow
                 return;
             }
             var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-            var jobs = new List<BaldrickJob>();
+            var cards = new List<BaldrickCard>();
+
+            // ── Batch stories: what's happening, per client, in a sentence ──
+            if (doc.RootElement.TryGetProperty("production", out var prod) &&
+                prod.TryGetProperty("batches", out var batches))
+            {
+                foreach (var b in batches.EnumerateObject())
+                {
+                    int V(string k) => b.Value.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : 0;
+                    var pending = V("pending"); var review = V("awaiting_approval"); var generating = V("generating"); var failed = V("failed");
+                    string state; SolidColorBrush brush;
+                    if (generating > 0) { state = "RENDERING"; brush = Brush("#E0B45A"); }
+                    else if (b.Value.TryGetProperty("latestMove", out var lm) && lm.ValueKind == JsonValueKind.String
+                             && DateTime.TryParse(lm.GetString(), out var mv)
+                             && (DateTime.UtcNow - mv.ToUniversalTime()).TotalMinutes < 10) { state = "MOVING"; brush = Brush("#4FC38A"); }
+                    else if (pending > 0) { state = "HELD"; brush = Brush("#9BA3B0"); }
+                    else { state = "QUIET"; brush = Brush("#4FC38A"); }
+                    cards.Add(new BaldrickCard
+                    {
+                        Badge = state, BadgeBrush = brush,
+                        Title = $"{b.Name} renders",
+                        Sub = $"{pending} queued · {generating} rendering · {review} waiting for your review" + (failed > 0 ? $" · {failed} failed" : ""),
+                    });
+                }
+            }
+
+            // ── Needs you: finished runs awaiting the yes; failed runs ──────
+            var label = "";
             foreach (var it in doc.RootElement.GetProperty("items").EnumerateArray())
             {
-                jobs.Add(new BaldrickJob
+                var kind = it.GetProperty("kind").GetString() ?? "";
+                var process = it.GetProperty("process").GetString() ?? "";
+                var client = it.GetProperty("client").GetString() ?? "";
+                var err = it.TryGetProperty("error", out var e) && e.ValueKind == JsonValueKind.String ? e.GetString() ?? "" : "";
+                label = kind switch
+                {
+                    "awaiting-decision" => "NEEDS YOUR YES",
+                    "failed" => "RUN FAILED",
+                    "running" => "THINKING",
+                    _ => "QUEUED RUN",
+                };
+                cards.Add(new BaldrickCard
                 {
                     Id = it.GetProperty("id").GetString() ?? "",
-                    Kind = it.GetProperty("kind").GetString() ?? "",
-                    Process = it.GetProperty("process").GetString() ?? "",
-                    Client = it.GetProperty("client").GetString() ?? "",
-                    QueuedAt = it.GetProperty("queuedAt").GetString() ?? "",
-                    Error = it.TryGetProperty("error", out var e) && e.ValueKind == JsonValueKind.String ? e.GetString() ?? "" : "",
+                    Badge = label,
+                    BadgeBrush = kind == "awaiting-decision" ? Brush("#6AA8E0") : kind == "failed" ? Brush("#E05A5A") : Brush("#9BA3B0"),
+                    Title = $"{process} — {client}",
+                    Sub = err,
+                    CanApprove = kind == "awaiting-decision" ? Visibility.Visible : Visibility.Collapsed,
+                    CanReject = kind == "awaiting-decision" ? Visibility.Visible : Visibility.Collapsed,
+                    CanRetry = kind == "failed" ? Visibility.Visible : Visibility.Collapsed,
+                    CanCancel = kind is "failed" or "queued" ? Visibility.Visible : Visibility.Collapsed,
+                    CanOpen = Visibility.Visible,
                     Link = it.GetProperty("link").GetString() ?? "/ops/processes",
-                    Actions = string.Join(",", it.GetProperty("actions").EnumerateArray().Select(a => a.GetString())),
+                    ActApprove = "approve", ActReject = "reject", ActRetry = "retry", ActCancel = "cancel",
                 });
             }
-            var chips = new List<string>();
 
-            // Production batches: the render pipeline per client, straight from the
-            // system (Stephen 2026-08-11: Percy watches renders, not a chat window).
-            if (doc.RootElement.TryGetProperty("production", out var prod))
+            if (doc.RootElement.TryGetProperty("production", out var prod2))
             {
-                if (prod.TryGetProperty("batches", out var batches))
-                {
-                    foreach (var b in batches.EnumerateObject())
-                    {
-                        int V(string k) => b.Value.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : 0;
-                        var moving = b.Value.TryGetProperty("latestMove", out var lm) && lm.ValueKind == JsonValueKind.String
-                            && DateTime.TryParse(lm.GetString(), out var mv)
-                            ? (DateTime.UtcNow - mv.ToUniversalTime()).TotalMinutes < 10 ? "rendering" : $"stalled since {mv:HH:mm}"
-                            : "idle";
-                        chips.Add($"{b.Name} renders: {V("pending")} queued, {V("awaiting_approval")} to review ({moving})");
-                    }
-                }
-                // The line-up itself: what's rendering and what's next, each row
-                // named (product · colour) with the workflow it will run through
-                // (format → method [recipe status]) so queue and machinery are
-                // visibly matched — a count alone is not a queue.
-                if (prod.TryGetProperty("lineup", out var lineup))
-                {
-                    // Join each job's METHOD to the local methods map so the
-                    // Workflow column shows the actual file on this machine —
-                    // the job and the thing that will run it, side by side.
-                    var methodFiles = Store.Methods().ToDictionary(m => m.MethodKey, m => m.WorkflowFile);
-                    foreach (var l in lineup.EnumerateArray())
-                    {
-                        var st = l.GetProperty("status").GetString() ?? "";
-                        var method = l.TryGetProperty("method", out var me) && me.ValueKind == JsonValueKind.String ? me.GetString() ?? "" : "";
-                        var recipeStatus = l.TryGetProperty("recipeStatus", out var rs) && rs.ValueKind == JsonValueKind.String ? rs.GetString() ?? "" : "";
-                        var file = method.Length > 0 && methodFiles.TryGetValue(method, out var wf) && !string.IsNullOrEmpty(wf) ? wf : "";
-                        var workflow = method.Length == 0
-                            ? "NO METHOD — job can never render"
-                            : $"{method} → {(file.Length > 0 ? file : "(no workflow file — toolbox steps only)")}" +
-                              (recipeStatus.Length > 0 && recipeStatus != "proven" ? $" [{recipeStatus}]" : "");
-                        jobs.Add(new BaldrickJob
-                        {
-                            Id = l.GetProperty("id").GetString() ?? "",
-                            Kind = st == "generating" ? "rendering NOW" : "render queued",
-                            Process = l.GetProperty("item").GetString() ?? "",
-                            Workflow = workflow,
-                            Client = l.GetProperty("client").GetString() ?? "",
-                            QueuedAt = l.TryGetProperty("startedAt", out var sa) && sa.ValueKind == JsonValueKind.String ? sa.GetString() ?? "" : "",
-                            Link = "/produce",
-                            Actions = "",
-                        });
-                    }
-                }
-                if (prod.TryGetProperty("deadJobs", out var dead))
+                // 3-strike failures: the only production items a human sees
+                if (prod2.TryGetProperty("deadJobs", out var dead))
                 {
                     foreach (var d in dead.EnumerateArray())
                     {
-                        jobs.Add(new BaldrickJob
+                        cards.Add(new BaldrickCard
                         {
                             Id = d.GetProperty("id").GetString() ?? "",
-                            Kind = "production-failed",
-                            Process = "render (3 strikes)",
-                            Client = d.GetProperty("client").GetString() ?? "",
-                            QueuedAt = d.TryGetProperty("failedAt", out var fa) ? fa.GetString() ?? "" : "",
-                            Error = d.TryGetProperty("error", out var de) && de.ValueKind == JsonValueKind.String ? de.GetString() ?? "" : "",
+                            Badge = "3 STRIKES",
+                            BadgeBrush = Brush("#E05A5A"),
+                            Title = $"{(d.TryGetProperty("jobCode", out var jc) ? jc.GetString() : null) ?? "render"} — {d.GetProperty("client").GetString()}",
+                            Sub = d.TryGetProperty("error", out var de) && de.ValueKind == JsonValueKind.String ? de.GetString() ?? "" : "",
+                            CanRetry = Visibility.Visible, CanCancel = Visibility.Visible, CanOpen = Visibility.Visible,
                             Link = "/produce",
-                            Actions = "retry,cancel", // mapped to retry-production / abandon-production on send
+                            ActRetry = "retry-production", ActCancel = "abandon-production",
                         });
                     }
                 }
+
+                // Rendering now + next up, with checklist progress
+                if (prod2.TryGetProperty("lineup", out var lineup))
+                {
+                    var shown = 0; var total = 0;
+                    foreach (var l in lineup.EnumerateArray())
+                    {
+                        total++;
+                        if (shown >= 8) continue;
+                        shown++;
+                        var st = l.GetProperty("status").GetString() ?? "";
+                        var ticked = new List<string>(); string next = "render";
+                        if (l.TryGetProperty("stepMarks", out var marks) && marks.ValueKind == JsonValueKind.Object)
+                        {
+                            foreach (var s in StepOrder)
+                                if (marks.TryGetProperty(s, out _)) ticked.Add(s);
+                            next = StepOrder.FirstOrDefault(s => !ticked.Contains(s)) ?? "done";
+                        }
+                        cards.Add(new BaldrickCard
+                        {
+                            Id = l.GetProperty("id").GetString() ?? "",
+                            Badge = st == "generating" ? "RENDERING NOW" : "NEXT UP",
+                            BadgeBrush = st == "generating" ? Brush("#E0B45A") : Brush("#3B4452"),
+                            Title = l.GetProperty("item").GetString() ?? "",
+                            Sub = $"{l.GetProperty("workflow").GetString()}   ·   steps done: {ticked.Count}/{StepOrder.Length}, next: {next}",
+                        });
+                    }
+                    if (total > shown)
+                        cards.Add(new BaldrickCard { Badge = "QUEUE", BadgeBrush = Brush("#3B4452"), Title = $"…and {total - shown} more waiting", Sub = "The full line-up lives in Baldrick → Produce." });
+                }
             }
 
-            _baldrickJobs = jobs;
-            BaldrickGrid.ItemsSource = jobs;
-
+            BaldrickCards.ItemsSource = cards;
+            var chips = new List<string>();
             foreach (var q in doc.RootElement.GetProperty("queues").EnumerateArray())
             {
                 var n = q.GetProperty("count").GetInt32();
                 if (n > 0) chips.Add($"{q.GetProperty("label").GetString()}: {n}");
             }
-            var waiting = jobs.Count(j => j.Kind == "awaiting-decision");
-            var failed = jobs.Count(j => j.Kind == "failed");
-            BaldrickStatus.Text =
-                $"{jobs.Count} jobs ({waiting} awaiting your yes, {failed} failed)" +
-                (chips.Count > 0 ? "  ·  " + string.Join("  ·  ", chips) : "") +
-                $"  ·  as of {DateTime.Now:HH:mm:ss}";
+            var needsYou = cards.Count(c => c.Badge is "NEEDS YOUR YES" or "3 STRIKES");
+            BaldrickStatus.Text = (needsYou > 0 ? $"{needsYou} thing{(needsYou == 1 ? "" : "s")} need you" : "Nothing needs you")
+                + (chips.Count > 0 ? "  ·  " + string.Join("  ·  ", chips) : "")
+                + $"  ·  as of {DateTime.Now:HH:mm:ss}";
         }
         catch (Exception ex)
         {
@@ -168,41 +197,25 @@ public partial class MainWindow
         }
     }
 
-    async Task ActBaldrickAsync(string action)
+    async Task ActBaldrickCardAsync(string id, string action)
     {
-        if (BaldrickGrid.SelectedItem is not BaldrickJob job)
-        {
-            BaldrickStatus.Text = "Pick a job in the list first.";
-            return;
-        }
-        if (!job.Actions.Split(',').Contains(action))
-        {
-            BaldrickStatus.Text = $"'{action}' doesn't apply to a {job.Kind} job.";
-            return;
-        }
+        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(action)) return;
         var note = BaldrickReason.Text.Trim();
-        if (action == "reject" && note.Length == 0)
+        if (action is "reject" or "abandon-production" && note.Length == 0)
         {
-            BaldrickStatus.Text = "A rejection owes a reason — type it in the reason box.";
+            BaldrickStatus.Text = "A rejection owes a reason — type it in the reason box first.";
             return;
         }
-        // A production-failed row reuses the Retry/Cancel buttons but speaks the
-        // production verbs to the API (cancel = abandon, reason box respected).
-        var sendAction = job.Kind == "production-failed"
-            ? (action == "retry" ? "retry-production" : "abandon-production")
-            : action;
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Post, BaldrickUrl + "/api/v1/percy/act");
             req.Headers.Add("x-production-secret", BaldrickSecret());
             req.Content = new StringContent(
-                JsonSerializer.Serialize(new { runId = job.Id, action = sendAction, note }),
+                JsonSerializer.Serialize(new { runId = id, action, note }),
                 Encoding.UTF8, "application/json");
             using var res = await BaldrickHttp.SendAsync(req);
             var body = await res.Content.ReadAsStringAsync();
-            BaldrickStatus.Text = res.IsSuccessStatusCode
-                ? $"{action} → {job.Process} ({job.Client})"
-                : $"Baldrick said {(int)res.StatusCode}: {body}";
+            BaldrickStatus.Text = res.IsSuccessStatusCode ? $"{action} ✓" : $"Baldrick said {(int)res.StatusCode}: {body}";
             BaldrickReason.Text = "";
             await RefreshBaldrickAsync();
         }
@@ -212,28 +225,35 @@ public partial class MainWindow
         }
     }
 
-    void BaldrickRefresh_Click(object sender, RoutedEventArgs e) => _ = RefreshBaldrickAsync();
-    void BaldrickApprove_Click(object sender, RoutedEventArgs e) => _ = ActBaldrickAsync("approve");
-    void BaldrickReject_Click(object sender, RoutedEventArgs e) => _ = ActBaldrickAsync("reject");
-    void BaldrickRetry_Click(object sender, RoutedEventArgs e) => _ = ActBaldrickAsync("retry");
-    void BaldrickCancel_Click(object sender, RoutedEventArgs e) => _ = ActBaldrickAsync("cancel");
+    BaldrickCard? CardOf(object sender) => (sender as FrameworkElement)?.Tag as BaldrickCard;
 
-    void BaldrickOpen_Click(object sender, RoutedEventArgs e)
+    void BaldrickCardApprove_Click(object sender, RoutedEventArgs e) { var c = CardOf(sender); if (c != null) _ = ActBaldrickCardAsync(c.Id, c.ActApprove); }
+    void BaldrickCardReject_Click(object sender, RoutedEventArgs e) { var c = CardOf(sender); if (c != null) _ = ActBaldrickCardAsync(c.Id, c.ActReject); }
+    void BaldrickCardRetry_Click(object sender, RoutedEventArgs e) { var c = CardOf(sender); if (c != null) _ = ActBaldrickCardAsync(c.Id, c.ActRetry); }
+    void BaldrickCardCancel_Click(object sender, RoutedEventArgs e) { var c = CardOf(sender); if (c != null) _ = ActBaldrickCardAsync(c.Id, c.ActCancel); }
+    void BaldrickCardOpen_Click(object sender, RoutedEventArgs e)
     {
-        var link = BaldrickGrid.SelectedItem is BaldrickJob job ? job.Link : "/ops/processes";
-        Process.Start(new ProcessStartInfo(BaldrickUrl + link) { UseShellExecute = true });
+        var c = CardOf(sender);
+        Process.Start(new ProcessStartInfo(BaldrickUrl + (c?.Link ?? "/ops/processes")) { UseShellExecute = true });
     }
+    void BaldrickRefresh_Click(object sender, RoutedEventArgs e) => _ = RefreshBaldrickAsync();
 }
 
-public class BaldrickJob
+public class BaldrickCard
 {
     public string Id { get; set; } = "";
-    public string Kind { get; set; } = "";
-    public string Process { get; set; } = "";
-    public string Workflow { get; set; } = "";
-    public string Client { get; set; } = "";
-    public string QueuedAt { get; set; } = "";
-    public string Error { get; set; } = "";
+    public string Badge { get; set; } = "";
+    public SolidColorBrush BadgeBrush { get; set; } = new(Colors.Gray);
+    public string Title { get; set; } = "";
+    public string Sub { get; set; } = "";
     public string Link { get; set; } = "";
-    public string Actions { get; set; } = "";
+    public string ActApprove { get; set; } = "approve";
+    public string ActReject { get; set; } = "reject";
+    public string ActRetry { get; set; } = "retry";
+    public string ActCancel { get; set; } = "cancel";
+    public Visibility CanApprove { get; set; } = Visibility.Collapsed;
+    public Visibility CanReject { get; set; } = Visibility.Collapsed;
+    public Visibility CanRetry { get; set; } = Visibility.Collapsed;
+    public Visibility CanCancel { get; set; } = Visibility.Collapsed;
+    public Visibility CanOpen { get; set; } = Visibility.Collapsed;
 }

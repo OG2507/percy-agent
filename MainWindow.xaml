@@ -185,9 +185,9 @@
       </Grid>
     </TabItem>
 
-    <!-- Baldrick: the CONTROLLER view — Baldrick's jobs, here, because this
-         is the one queue. Approve/Reject finished runs, Retry/Cancel failures,
-         Open jumps to the workbench page for the detail. Polls every 60s. -->
+    <!-- Baldrick: the CONTROLLER as CARDS (Stephen's design 2026-08-11) —
+         one thing per card, a badge, a sentence, buttons. Batch stories,
+         needs-you decisions, rendering-now with checklist progress. -->
     <TabItem Header="Baldrick">
       <Grid Margin="0,14,0,0">
         <Grid.RowDefinitions>
@@ -195,47 +195,61 @@
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-          <Button Content="Approve" Style="{StaticResource Action}" Click="BaldrickApprove_Click"/>
-          <Button Content="Reject" Style="{StaticResource Action}" Click="BaldrickReject_Click" Margin="8,0,0,0"/>
-          <TextBox x:Name="BaldrickReason" Width="220" Margin="8,0,0,0" FontSize="12"
-                   Background="{StaticResource Panel}" Foreground="{StaticResource Ink}"
-                   BorderBrush="{StaticResource PanelEdge}" VerticalContentAlignment="Center"
-                   ToolTip="Reason — required for Reject, kept as the record"/>
-          <Button Content="Retry" Style="{StaticResource Action}" Click="BaldrickRetry_Click" Margin="16,0,0,0"/>
-          <Button Content="Cancel job" Style="{StaticResource Action}" Click="BaldrickCancel_Click" Margin="8,0,0,0"/>
-          <Button Content="Open in Baldrick" Style="{StaticResource Action}" Click="BaldrickOpen_Click" Margin="16,0,0,0"/>
-          <Button Content="Refresh" Style="{StaticResource Action}" Click="BaldrickRefresh_Click" Margin="8,0,0,0"/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+          <TextBlock x:Name="BaldrickStatus" FontSize="14" Foreground="{StaticResource Muted}"
+                     Margin="0,0,0,8" Text="Connecting to Baldrick…"/>
+          <StackPanel Orientation="Horizontal">
+            <TextBox x:Name="BaldrickReason" Width="320" FontSize="13"
+                     Background="{StaticResource Panel}" Foreground="{StaticResource Ink}"
+                     BorderBrush="{StaticResource PanelEdge}" VerticalContentAlignment="Center"
+                     ToolTip="Reason — required before Reject or Abandon, kept as the record"/>
+            <TextBlock Text="reason (for reject/abandon)" FontSize="11" Foreground="#5C6472"
+                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+            <Button Content="Refresh" Style="{StaticResource Action}" Click="BaldrickRefresh_Click" Margin="16,0,0,0"/>
+          </StackPanel>
         </StackPanel>
 
-        <Grid Grid.Row="1">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-          </Grid.RowDefinitions>
-          <TextBlock x:Name="BaldrickStatus" Grid.Row="0" FontSize="12"
-                     Foreground="{StaticResource Muted}" Margin="0,0,0,8"
-                     Text="Connecting to Baldrick…"/>
-          <DataGrid x:Name="BaldrickGrid" Grid.Row="1"
-                    AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
-                    SelectionMode="Single" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                    Background="{StaticResource Bg}" Foreground="{StaticResource Ink}"
-                    RowBackground="{StaticResource Panel}" AlternatingRowBackground="#20242B"
-                    BorderBrush="{StaticResource PanelEdge}" BorderThickness="1"
-                    HorizontalGridLinesBrush="{StaticResource PanelEdge}"
-                    FontSize="12" ColumnWidth="Auto"
-                    HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <DataGrid.Columns>
-              <DataGridTextColumn Header="State" Binding="{Binding Kind}" Width="120"/>
-              <DataGridTextColumn Header="Job" Binding="{Binding Process}" Width="300"/>
-              <DataGridTextColumn Header="Workflow" Binding="{Binding Workflow}" Width="300"/>
-              <DataGridTextColumn Header="Client" Binding="{Binding Client}" Width="60"/>
-              <DataGridTextColumn Header="Queued" Binding="{Binding QueuedAt}" Width="150"/>
-              <DataGridTextColumn Header="Can do" Binding="{Binding Actions}" Width="120"/>
-              <DataGridTextColumn Header="Error" Binding="{Binding Error}" Width="360"/>
-            </DataGrid.Columns>
-          </DataGrid>
-        </Grid>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+          <ItemsControl x:Name="BaldrickCards">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource PanelEdge}"
+                        BorderThickness="1" CornerRadius="10" Padding="18,14" Margin="0,0,0,10">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="130"/>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" VerticalAlignment="Top" CornerRadius="5"
+                            Background="{Binding BadgeBrush}" Padding="8,3" Margin="0,2,14,0">
+                      <TextBlock Text="{Binding Badge}" FontSize="10.5" FontWeight="Bold"
+                                 Foreground="#14161A" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                    </Border>
+                    <StackPanel Grid.Column="1">
+                      <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold"
+                                 TextWrapping="Wrap" Margin="0,0,14,0"/>
+                      <TextBlock Text="{Binding Sub}" FontSize="12.5" Foreground="{StaticResource Muted}"
+                                 TextWrapping="Wrap" Margin="0,4,14,0"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                      <Button Content="Approve" Style="{StaticResource Primary}" Tag="{Binding}"
+                              Visibility="{Binding CanApprove}" Click="BaldrickCardApprove_Click"/>
+                      <Button Content="Reject" Style="{StaticResource Action}" Tag="{Binding}" Margin="6,0,0,0"
+                              Visibility="{Binding CanReject}" Click="BaldrickCardReject_Click"/>
+                      <Button Content="Retry" Style="{StaticResource Action}" Tag="{Binding}" Margin="6,0,0,0"
+                              Visibility="{Binding CanRetry}" Click="BaldrickCardRetry_Click"/>
+                      <Button Content="Abandon" Style="{StaticResource Action}" Tag="{Binding}" Margin="6,0,0,0"
+                              Visibility="{Binding CanCancel}" Click="BaldrickCardCancel_Click"/>
+                      <Button Content="Open" Style="{StaticResource Action}" Tag="{Binding}" Margin="6,0,0,0"
+                              Visibility="{Binding CanOpen}" Click="BaldrickCardOpen_Click"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
       </Grid>
     </TabItem>
     </TabControl>
