@@ -142,9 +142,10 @@
       </Grid>
     </TabItem>
 
-    <!-- Methods: THE map — how each kind of thing is made. This grid IS the
-         knowledge; Percy Worker reads this same table to dispatch. Editing a
-         row here changes how the worker behaves, no code involved. -->
+    <!-- Methods as CARDS (Stephen 2026-08-11: no more spreadsheets). This is
+         the LOCAL FALLBACK map only — the truth lives in Baldrick's Central
+         Catalogue (the method on each output type), which is what the worker
+         now prefers. Read here, edit there. -->
     <TabItem Header="Methods">
       <Grid Margin="0,14,0,0">
         <Grid.RowDefinitions>
@@ -153,35 +154,36 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-          <Button Content="Save changes" Style="{StaticResource Action}" Click="SaveMethods_Click"/>
+          <Button Content="Open the Central Catalogue" Style="{StaticResource Primary}" Click="OpenCatalogue_Click"/>
           <Button Content="Reload" Style="{StaticResource Action}" Click="ReloadMethods_Click" Margin="8,0,0,0"/>
-          <TextBlock x:Name="MethodsHint" VerticalAlignment="Center" FontSize="12"
+          <TextBlock x:Name="MethodsHint" VerticalAlignment="Center" FontSize="13"
                      Foreground="{StaticResource Muted}" Margin="12,0,0,0"
-                     Text="How each kind of thing is made. New method = copy a workflow file, add a row."/>
+                     Text="The truth lives in Baldrick's catalogue — this is the local fallback copy."/>
         </StackPanel>
 
-        <DataGrid x:Name="MethodsGrid" Grid.Row="1"
-                  AutoGenerateColumns="False" CanUserAddRows="True"
-                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                  Background="{StaticResource Bg}" Foreground="{StaticResource Ink}"
-                  RowBackground="{StaticResource Panel}" AlternatingRowBackground="#20242B"
-                  BorderBrush="{StaticResource PanelEdge}" BorderThickness="1"
-                  HorizontalGridLinesBrush="{StaticResource PanelEdge}"
-                  FontSize="12" ColumnWidth="Auto"
-                  HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-          <DataGrid.Columns>
-            <DataGridCheckBoxColumn Header="On" Binding="{Binding Enabled}" Width="36"/>
-            <DataGridTextColumn Header="Method" Binding="{Binding MethodKey}" Width="200"/>
-            <DataGridTextColumn Header="Also answers to" Binding="{Binding Aliases}" Width="130"/>
-            <DataGridTextColumn Header="What it makes" Binding="{Binding Label}" Width="240"/>
-            <DataGridTextColumn Header="Engine" Binding="{Binding Engine}" Width="130"/>
-            <DataGridTextColumn Header="Workflow file" Binding="{Binding WorkflowFile}" Width="300"/>
-            <DataGridTextColumn Header="Finishing steps" Binding="{Binding Steps}" Width="180"/>
-            <DataGridTextColumn Header="Injections (job value → workflow slot)" Binding="{Binding Injections}" Width="340"/>
-            <DataGridTextColumn Header="Settings" Binding="{Binding Settings}" Width="220"/>
-            <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="380"/>
-          </DataGrid.Columns>
-        </DataGrid>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+          <ItemsControl x:Name="MethodCards">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource PanelEdge}"
+                        BorderThickness="1" CornerRadius="10" Padding="18,14" Margin="0,0,0,10">
+                  <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <Border CornerRadius="5" Background="{Binding BadgeBrush}" Padding="8,3" Margin="0,0,10,0">
+                        <TextBlock Text="{Binding Badge}" FontSize="10.5" FontWeight="Bold" Foreground="#14161A"/>
+                      </Border>
+                      <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Sub}" FontSize="12.5" Foreground="{StaticResource Muted}"
+                               TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="#8A93A3"
+                               TextWrapping="Wrap" Margin="0,4,0,0" FontFamily="Consolas"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
       </Grid>
     </TabItem>
 

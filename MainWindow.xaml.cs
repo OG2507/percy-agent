@@ -114,34 +114,41 @@ public partial class MainWindow : Window
 
     void OpenApprovals_Click(object sender, RoutedEventArgs e) => Baldrick.OpenApprovalsInBrowser();
 
-    // ── Methods tab ─────────────────────────────────────────────────────────
-    // The grid edits the same table Percy Worker dispatches from. Save writes
-    // straight back; there is no second copy anywhere to drift.
-
-    System.Collections.ObjectModel.ObservableCollection<MethodRow> methodRows = [];
+    // ── Methods tab: CARDS, read-only (Stephen 2026-08-11) ──────────────────
+    // The truth is Baldrick's Central Catalogue (method on the output type),
+    // which the worker prefers. This shows the LOCAL FALLBACK map as readable
+    // cards — one method per card, no spreadsheet.
 
     void LoadMethods()
     {
-        methodRows = new(Store.Methods());
-        MethodsGrid.ItemsSource = methodRows;
-        MethodsHint.Text = $"{methodRows.Count} methods · this table is what the worker runs · db: {Store.DatabasePath}";
+        var cards = new List<BaldrickCard>();
+        foreach (var m in Store.Methods())
+        {
+            var local = m.Engine.StartsWith("local");
+            var detail = (string.IsNullOrEmpty(m.WorkflowFile) ? "no workflow file (toolbox steps only)" : m.WorkflowFile)
+                         + (string.IsNullOrEmpty(m.Steps) ? "" : $"   ·   finishing: {m.Steps}");
+            cards.Add(new BaldrickCard
+            {
+                Id = m.MethodKey,
+                Badge = m.Enabled ? (local ? "LOCAL (5090)" : "CLOUD") : "OFF",
+                BadgeBrush = m.Enabled
+                    ? new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(local ? "#4FC38A" : "#6AA8E0"))
+                    : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray),
+                Title = $"{m.MethodKey} — {m.Label}",
+                Sub = m.Notes,
+                Detail = detail,
+            });
+        }
+        MethodCards.ItemsSource = cards;
+        MethodsHint.Text = $"{cards.Count} methods (local fallback) · the truth lives in the Central Catalogue · db: {Store.DatabasePath}";
     }
 
     void ReloadMethods_Click(object sender, RoutedEventArgs e) => LoadMethods();
 
-    void SaveMethods_Click(object sender, RoutedEventArgs e)
-    {
-        MethodsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true);
-        int saved = 0;
-        foreach (var m in methodRows)
-        {
-            if (string.IsNullOrWhiteSpace(m.MethodKey)) continue;   // a blank new-row line
-            Store.SaveMethod(m);
-            saved++;
-        }
-        LoadMethods();
-        MethodsHint.Text = $"saved {saved} methods · db: {Store.DatabasePath}";
-    }
+    void OpenCatalogue_Click(object sender, RoutedEventArgs e) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+            Store.Setting("baldrick_url", "https://baldrick.vslmedia.co.uk").TrimEnd('/') + "/catalogue")
+        { UseShellExecute = true });
 
     int TagId(object sender) => (int)((Button)sender).Tag;
 

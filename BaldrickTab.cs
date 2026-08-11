@@ -249,6 +249,7 @@ public class BaldrickCard
     public SolidColorBrush BadgeBrush { get; set; } = new(Colors.Gray);
     public string Title { get; set; } = "";
     public string Sub { get; set; } = "";
+    public string Detail { get; set; } = "";
     public string Link { get; set; } = "";
     public string ActApprove { get; set; } = "approve";
     public string ActReject { get; set; } = "reject";
