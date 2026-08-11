@@ -203,17 +203,20 @@
                finish the job it is on and then stop. -->
           <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource PanelEdge}"
                   BorderThickness="1" CornerRadius="6" Padding="14,11" Margin="0,0,0,10">
+            <!-- Buttons FIRST, on the left. They were on the right and fell off
+                 the edge on a narrow window — the two controls that matter most
+                 were the first thing to disappear. -->
             <StackPanel Orientation="Horizontal">
-              <TextBlock x:Name="RunnerState" FontSize="15" FontWeight="SemiBold"
-                         VerticalAlignment="Center" Text="Percy: checking…"/>
-              <TextBlock x:Name="RunnerDoing" FontSize="13" Foreground="{StaticResource Muted}"
-                         VerticalAlignment="Center" Margin="14,0,0,0" Text=""/>
               <Button x:Name="RunnerPlay" Content="▶  Play" Style="{StaticResource Action}"
-                      Margin="20,0,0,0" Click="RunnerPlay_Click"
+                      Click="RunnerPlay_Click"
                       ToolTip="Start Percy. It works job after job until there is nothing left."/>
               <Button x:Name="RunnerPause" Content="❚❚  Pause" Style="{StaticResource Action}"
                       Margin="8,0,0,0" Click="RunnerPause_Click"
                       ToolTip="Percy finishes the job it is on, reports it, then stops."/>
+              <TextBlock x:Name="RunnerState" FontSize="15" FontWeight="SemiBold"
+                         VerticalAlignment="Center" Margin="16,0,0,0" Text="Percy: checking…"/>
+              <TextBlock x:Name="RunnerDoing" FontSize="13" Foreground="{StaticResource Muted}"
+                         VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis" Text=""/>
             </StackPanel>
           </Border>
 
