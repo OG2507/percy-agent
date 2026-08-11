@@ -16,14 +16,33 @@ namespace PercyAgent;
 public sealed class Baldrick
 {
     public const string Api = "https://baldrick.vslmedia.co.uk";
-    const string SecretPath = @"D:\ComfyUI-Data\baldrick\.worker_secret";
+    // Where the worker secret lives. The toolbox moved into workflows\python
+    // and this path did not follow it, so every call went out with an empty
+    // secret and came back 401 — for a whole day, saying only "Baldrick
+    // returned 401" with no hint why. First one that exists wins, newest
+    // first, and if none exist that is said out loud rather than guessed at.
+    static readonly string[] SecretPaths =
+    {
+        @"D:\ComfyUI-Data\baldrick\workflows\python\.worker_secret",
+        @"D:\ComfyUI-Data\baldrick\.worker_secret",
+        @"C:\ComfyUI\ComfyUI\user\default\workflows\baldrick-tools\.worker_secret",
+    };
     const string WorkerDir  = @"D:\ComfyUI-Data\baldrick";
     const string ComfyUrl   = "http://127.0.0.1:8188/system_stats";
 
     static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
 
     string? secret;
-    string Secret => secret ??= File.Exists(SecretPath) ? File.ReadAllText(SecretPath).Trim() : "";
+    string Secret
+    {
+        get
+        {
+            if (secret != null) return secret;
+            foreach (var p in SecretPaths)
+                if (File.Exists(p)) return secret = File.ReadAllText(p).Trim();
+            return secret = "";
+        }
+    }
 
     public sealed record Status(
         int AwaitingApproval, int PendingLocal, int PendingCloud,
@@ -40,7 +59,14 @@ public sealed class Baldrick
             req.Headers.Add("x-production-secret", Secret);
             var res = await Http.SendAsync(req);
             if (!res.IsSuccessStatusCode)
-                return new Status(0, 0, 0, comfy, $"Baldrick returned {(int)res.StatusCode}");
+            {
+                var why = (int)res.StatusCode == 401
+                    ? Secret.Length == 0
+                        ? "Baldrick refused us (401) — no worker secret found. Looked in: " + string.Join(" ; ", SecretPaths)
+                        : "Baldrick refused us (401) — the worker secret we sent is not the one it expects"
+                    : $"Baldrick returned {(int)res.StatusCode}";
+                return new Status(0, 0, 0, comfy, why);
+            }
 
             using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
             int awaiting = doc.RootElement.TryGetProperty("data", out var d) && d.ValueKind == JsonValueKind.Array
