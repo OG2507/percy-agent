@@ -206,9 +206,18 @@ public partial class MainWindow
         var note = BaldrickReason.Text.Trim();
         if (action is "reject" or "abandon-production" && note.Length == 0)
         {
-            BaldrickStatus.Text = "A rejection owes a reason — type it in the reason box first.";
+            // It used to say this in small grey text at the top of the page, so
+            // pressing Abandon looked like it did nothing at all. Say it loudly,
+            // and put the cursor where the answer goes.
+            BaldrickStatus.Text = "▲  Type a reason in the box first — a rejection owes a reason.";
+            BaldrickStatus.Foreground = Brush("#8C2F2F");
+            BaldrickStatus.FontWeight = System.Windows.FontWeights.Bold;
+            BaldrickReason.Focus();
+            BaldrickReason.BorderBrush = Brush("#8C2F2F");
             return;
         }
+        BaldrickStatus.FontWeight = System.Windows.FontWeights.Normal;
+        BaldrickReason.BorderBrush = Brush("#2A3140");
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Post, BaldrickUrl + "/api/v1/percy/act");
