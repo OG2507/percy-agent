@@ -98,7 +98,16 @@ public partial class MainWindow
                 }
             }
 
-            // ── Needs you: finished runs awaiting the yes; failed runs ──────
+            // ── BALDRICK'S OWN WORK, kept apart from Percy's ────────────────
+            // Stephen, 2026-08-14: "plan the month and plan the year isn't a
+            // Percy item, is it? It's a Baldrick item that shouldn't be in the
+            // list. That should be separated."
+            // Right: these are process RUNS — the server thinking — and they
+            // were interleaved with renders, so the queue read as noise and
+            // taught him to distrust it. They are still here, because a failed
+            // run and a run awaiting his yes both need him; they now sit below
+            // Percy's work, behind a divider that says whose they are.
+            var brainCards = new List<BaldrickCard>();
             var label = "";
             foreach (var it in doc.RootElement.GetProperty("items").EnumerateArray())
             {
@@ -113,7 +122,7 @@ public partial class MainWindow
                     "running" => "THINKING",
                     _ => "QUEUED RUN",
                 };
-                cards.Add(new BaldrickCard
+                brainCards.Add(new BaldrickCard
                 {
                     Id = it.GetProperty("id").GetString() ?? "",
                     Badge = label,
@@ -180,6 +189,19 @@ public partial class MainWindow
                     if (total > shown)
                         cards.Add(new BaldrickCard { Badge = "QUEUE", BadgeBrush = Brush("#3B4452"), Title = $"…and {total - shown} more waiting", Sub = "The full line-up lives in Baldrick → Produce." });
                 }
+            }
+
+            if (brainCards.Count > 0)
+            {
+                cards.Add(new BaldrickCard
+                {
+                    Badge = "BALDRICK", BadgeBrush = Brush("#9BA3B0"),
+                    Title = $"— Baldrick's own work ({brainCards.Count}) —",
+                    Sub = "Not Percy. These are the server's own runs: planning, analysing, writing. "
+                        + "Nothing below this line touches the 5090.",
+                    CanOpen = Visibility.Visible, Link = "/ops/processes",
+                });
+                cards.AddRange(brainCards);
             }
 
             BaldrickCards.ItemsSource = cards;
