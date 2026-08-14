@@ -83,7 +83,14 @@ public sealed class Baldrick
     {
         try
         {
-            using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+            // FOUR SECONDS WAS A LIE DETECTOR FOR A SLOW ANSWER, NOT A DEAD ONE.
+            // ComfyUI serves /system_stats on the same thread that is sampling
+            // the card, so while the 5090 renders it can take many seconds to
+            // reply. The app then announced "ComfyUI isn't working" about a
+            // ComfyUI that was working hard. Stephen, 2026-08-14: "it's coming
+            // up saying Comfy UI isn't working. I thought we'd already decided
+            // this." Busy is not down.
+            using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
             return (await c.GetAsync(ComfyUrl)).IsSuccessStatusCode;
         }
         catch { return false; }

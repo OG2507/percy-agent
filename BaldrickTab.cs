@@ -98,47 +98,20 @@ public partial class MainWindow
                 }
             }
 
-            // ── BALDRICK'S OWN WORK, kept apart from Percy's ────────────────
-            // Stephen, 2026-08-14: "plan the month and plan the year isn't a
-            // Percy item, is it? It's a Baldrick item that shouldn't be in the
-            // list. That should be separated."
-            // Right: these are process RUNS — the server thinking — and they
-            // were interleaved with renders, so the queue read as noise and
-            // taught him to distrust it. They are still here, because a failed
-            // run and a run awaiting his yes both need him; they now sit below
-            // Percy's work, behind a divider that says whose they are.
-            var brainCards = new List<BaldrickCard>();
-            var label = "";
-            foreach (var it in doc.RootElement.GetProperty("items").EnumerateArray())
-            {
-                var kind = it.GetProperty("kind").GetString() ?? "";
-                var process = it.GetProperty("process").GetString() ?? "";
-                var client = it.GetProperty("client").GetString() ?? "";
-                var err = it.TryGetProperty("error", out var e) && e.ValueKind == JsonValueKind.String ? e.GetString() ?? "" : "";
-                label = kind switch
-                {
-                    "awaiting-decision" => "NEEDS YOUR YES",
-                    "failed" => "RUN FAILED",
-                    "running" => "THINKING",
-                    _ => "QUEUED RUN",
-                };
-                brainCards.Add(new BaldrickCard
-                {
-                    Id = it.GetProperty("id").GetString() ?? "",
-                    Badge = label,
-                    BadgeBrush = kind == "awaiting-decision" ? Brush("#6AA8E0") : kind == "failed" ? Brush("#E05A5A") : Brush("#9BA3B0"),
-                    Title = $"{process} — {client}",
-                    Sub = err,
-                    CanApprove = kind == "awaiting-decision" ? Visibility.Visible : Visibility.Collapsed,
-                    CanReject = kind == "awaiting-decision" ? Visibility.Visible : Visibility.Collapsed,
-                    CanRetry = kind == "failed" ? Visibility.Visible : Visibility.Collapsed,
-                    CanCancel = kind is "failed" or "queued" ? Visibility.Visible : Visibility.Collapsed,
-                    CanOpen = Visibility.Visible,
-                    Link = it.GetProperty("link").GetString() ?? "/ops/processes",
-                    ActApprove = "approve", ActReject = "reject", ActRetry = "retry", ActCancel = "cancel",
-                });
-            }
-
+            // ── BALDRICK'S OWN WORK IS NOT SHOWN HERE. ──────────────────────
+            // Stephen, 2026-08-14: "things that should be in Percy are things
+            // that Percy does. Nothing else... You would have a cue of what
+            // Baldrick is needing to do as a next stage. That shouldn't come up
+            // in the same place as Percy. That's really confusing."
+            //
+            // Right, and a divider was not enough — I tried that first and it
+            // was still one list. Process runs are the SERVER thinking:
+            // planning, analysing, writing. Nothing about them touches the
+            // 5090, nothing about them is Percy's, and mixing them into his
+            // queue is what made the queue unreadable. They live on the web at
+            // /ops/processes until they have a place of their own.
+            //
+            // The feed still returns them; this app deliberately ignores them.
             if (doc.RootElement.TryGetProperty("production", out var prod2))
             {
                 // 3-strike failures: the only production items a human sees
@@ -189,19 +162,6 @@ public partial class MainWindow
                     if (total > shown)
                         cards.Add(new BaldrickCard { Badge = "QUEUE", BadgeBrush = Brush("#3B4452"), Title = $"…and {total - shown} more waiting", Sub = "The full line-up lives in Baldrick → Produce." });
                 }
-            }
-
-            if (brainCards.Count > 0)
-            {
-                cards.Add(new BaldrickCard
-                {
-                    Badge = "BALDRICK", BadgeBrush = Brush("#9BA3B0"),
-                    Title = $"— Baldrick's own work ({brainCards.Count}) —",
-                    Sub = "Not Percy. These are the server's own runs: planning, analysing, writing. "
-                        + "Nothing below this line touches the 5090.",
-                    CanOpen = Visibility.Visible, Link = "/ops/processes",
-                });
-                cards.AddRange(brainCards);
             }
 
             BaldrickCards.ItemsSource = cards;
