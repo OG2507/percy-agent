@@ -292,8 +292,19 @@
           <StackPanel Orientation="Horizontal">
             <TextBlock Text="Client" FontSize="13" Foreground="{StaticResource Muted}"
                        VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <!-- The dropdown popup uses Windows' LIGHT chrome regardless of the
+                 app's dark theme, so inherited light text vanished on it
+                 (Stephen, 16 Aug: "light writing on a light background").
+                 Dark text on the light popup; closed-box text explicit too. -->
             <ComboBox x:Name="RunClientBox" Width="280" FontSize="13"
-                      VerticalContentAlignment="Center"/>
+                      VerticalContentAlignment="Center" Foreground="#14161A">
+              <ComboBox.ItemContainerStyle>
+                <Style TargetType="ComboBoxItem">
+                  <Setter Property="Foreground" Value="#14161A"/>
+                  <Setter Property="Background" Value="White"/>
+                </Style>
+              </ComboBox.ItemContainerStyle>
+            </ComboBox>
             <Button Content="Reload" Style="{StaticResource Action}"
                     Click="ReloadProcesses_Click" Margin="12,0,0,0"/>
           </StackPanel>
