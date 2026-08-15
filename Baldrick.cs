@@ -44,6 +44,11 @@ public sealed class Baldrick
         }
     }
 
+    // The Run tab authenticates with the same secret this class already loads —
+    // one loading mechanism, not a second copy with its own path that can go
+    // stale (the day-long 401 above is what a second copy costs).
+    public string WorkerSecret => Secret;
+
     public sealed record Status(
         int AwaitingApproval, int PendingLocal, int PendingCloud,
         bool ComfyUp, string? Error);
