@@ -12,7 +12,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += async (_, _) => { Refresh(); LoadMethods(); StartBaldrickPolling(); StartRunnerWatch(); InitChat(); _ = LoadProcessesAsync(); await RefreshWorkAsync(); };
+        Loaded += async (_, _) => { Refresh(); LoadMethods(); StartBaldrickPolling(); StartRunnerWatch(); StartWorkWatch(); InitChat(); _ = LoadProcessesAsync(); await RefreshWorkAsync(); };
     }
 
     /// <summary>A view row — the record plus the few things XAML needs to draw it.</summary>
@@ -88,6 +88,10 @@ public partial class MainWindow : Window
             WorkError.Text = $"Could not read Baldrick: {ex.Message}";
             WorkError.Visibility = Visibility.Visible;
         }
+
+        // The queue watcher rides every refresh — the Refresh button, the
+        // 60-second timer and the run-finished refresh all keep it honest.
+        await RefreshQueueHealthAsync();
     }
 
     void AppendLog(string line) => Dispatcher.Invoke(() =>

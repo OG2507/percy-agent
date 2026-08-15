@@ -99,6 +99,8 @@
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -123,7 +125,29 @@
           </StackPanel>
         </Border>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,14,0,10">
+        <!-- THE ALARM: only visible when the truths conflict — Baldrick says
+             jobs wait on Percy while Percy's own status file says it stopped,
+             or the Comfy supervisor reports the engine down or wrong. Colours
+             set in code: red = act now, amber = broken data, not machines. -->
+        <Border x:Name="QueueAlarm" Grid.Row="1" BorderThickness="1" CornerRadius="10"
+                Padding="14,11" Margin="0,10,0,0" Visibility="Collapsed">
+          <TextBlock x:Name="QueueAlarmText" FontSize="12.5" FontWeight="SemiBold"
+                     TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- The queue, by whose move it is: one line per owner, so "who is
+             everything waiting on" is a glance, not a database query. -->
+        <Border Grid.Row="2" Background="{StaticResource Panel}" BorderBrush="{StaticResource PanelEdge}"
+                BorderThickness="1" CornerRadius="10" Padding="18" Margin="0,10,0,0">
+          <StackPanel>
+            <TextBlock Text="The queue, by whose move it is" FontSize="12" FontWeight="SemiBold"
+                       Foreground="{StaticResource Muted}" Margin="0,0,0,10"/>
+            <TextBlock x:Name="QueueByOwner" FontSize="12.5" TextWrapping="Wrap"
+                       LineHeight="20" Text="Asking Baldrick…"/>
+          </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,14,0,10">
           <Button x:Name="RunBtn" Content="Run Percy" Style="{StaticResource Action}" Click="Run_Click"/>
           <Button Content="Approvals in browser" Style="{StaticResource Action}"
                   Click="OpenApprovals_Click" Margin="8,0,0,0"/>
@@ -131,7 +155,7 @@
         </StackPanel>
 
         <!-- What the worker is saying, as it says it -->
-        <Border Grid.Row="2" Background="#0E1116" BorderBrush="{StaticResource PanelEdge}"
+        <Border Grid.Row="4" Background="#0E1116" BorderBrush="{StaticResource PanelEdge}"
                 BorderThickness="1" CornerRadius="10" Padding="14">
           <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
             <TextBlock x:Name="WorkLog" FontFamily="Consolas" FontSize="12"

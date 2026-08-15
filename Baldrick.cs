@@ -84,6 +84,95 @@ public sealed class Baldrick
         }
     }
 
+    // ── Queue health: the whole queue, grouped by whose move it is ──────────
+
+    public sealed record OwnerLoad(string Owner, int Jobs, double StalestHours, int ThreeStrikes);
+    public sealed record StuckRender(string JobCode, string ClientCode, int ClaimedMinutesAgo);
+    public sealed record DeadEnd(string JobCode, string ClientCode, string Status, string Why);
+    public sealed record QueueHealth(
+        List<OwnerLoad> ByOwner,
+        List<StuckRender> StuckGenerating,
+        List<DeadEnd> CannotMove,
+        int? MinutesSincePercyTouched,
+        string? Error);
+
+    /// <summary>
+    /// The queue grouped by whose move it is, plus the two failure lists
+    /// (stuck mid-render, can never move). Same contract as GetStatusAsync:
+    /// never throws — a dead network is an error line on the card, not a
+    /// crashed window, and the reason is always said in full.
+    /// </summary>
+    public async Task<QueueHealth> GetQueueHealthAsync()
+    {
+        var none = new QueueHealth([], [], [], null, null);
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"{Api}/api/v1/percy/queue-health");
+            req.Headers.Add("x-production-secret", Secret);
+            using var res = await Http.SendAsync(req);
+            if (!res.IsSuccessStatusCode)
+            {
+                // Same 401 story as GetStatusAsync — a bare status code hid a
+                // missing secret file for a whole day once. Never again.
+                var why = (int)res.StatusCode == 401
+                    ? Secret.Length == 0
+                        ? "Baldrick refused us (401) — no worker secret found. Looked in: " + string.Join(" ; ", SecretPaths)
+                        : "Baldrick refused us (401) — the worker secret we sent is not the one it expects"
+                    : $"Baldrick returned {(int)res.StatusCode} for /queue-health";
+                return none with { Error = why };
+            }
+
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+            if (!doc.RootElement.TryGetProperty("data", out var d))
+                return none with { Error = "Baldrick answered /queue-health without a data block" };
+
+            var owners = new List<OwnerLoad>();
+            if (d.TryGetProperty("byOwner", out var by) && by.ValueKind == JsonValueKind.Array)
+                foreach (var o in by.EnumerateArray())
+                    owners.Add(new OwnerLoad(AsText(o, "owner"), AsInt(o, "jobs"),
+                        AsDouble(o, "stalest_hours"), AsInt(o, "three_strikes")));
+
+            var stuck = new List<StuckRender>();
+            if (d.TryGetProperty("stuckGenerating", out var sg) && sg.ValueKind == JsonValueKind.Array)
+                foreach (var s in sg.EnumerateArray())
+                    stuck.Add(new StuckRender(AsText(s, "job_code"), AsText(s, "client_code"),
+                        AsInt(s, "claimed_minutes_ago")));
+
+            var cannot = new List<DeadEnd>();
+            if (d.TryGetProperty("cannotMove", out var cm) && cm.ValueKind == JsonValueKind.Array)
+                foreach (var c in cm.EnumerateArray())
+                    cannot.Add(new DeadEnd(AsText(c, "job_code"), AsText(c, "client_code"),
+                        AsText(c, "status"), AsText(c, "why")));
+
+            int? touched = d.TryGetProperty("minutesSincePercyTouchedAJob", out var mt)
+                           && mt.ValueKind != JsonValueKind.Null
+                ? AsInt(d, "minutesSincePercyTouchedAJob") : null;
+
+            return new QueueHealth(owners, stuck, cannot, touched, null);
+        }
+        catch (Exception ex)
+        {
+            return none with { Error = ex.Message };
+        }
+    }
+
+    // Postgres sends counts as JSON numbers or as strings depending on the
+    // column type it aggregated from. Read both — a "3" in quotes that
+    // crashes the card would be a silly way to go down.
+    static string AsText(JsonElement e, string key) =>
+        e.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+
+    static int AsInt(JsonElement e, string key) => (int)AsDouble(e, key);
+
+    static double AsDouble(JsonElement e, string key)
+    {
+        if (!e.TryGetProperty(key, out var v)) return 0;
+        if (v.ValueKind == JsonValueKind.Number) return v.GetDouble();
+        if (v.ValueKind == JsonValueKind.String
+            && double.TryParse(v.GetString(), out var d)) return d;
+        return 0;
+    }
+
     public static async Task<bool> IsComfyUpAsync()
     {
         try
