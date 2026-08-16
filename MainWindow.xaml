@@ -233,12 +233,17 @@
             <StackPanel Orientation="Horizontal">
               <Button x:Name="RunnerPlay" Content="▶  Play" Style="{StaticResource Action}"
                       Click="RunnerPlay_Click"
-                      ToolTip="Start Percy. It works job after job until there is nothing left."/>
+                      ToolTip="Start EVERYTHING: the engine (hidden) and the queue. Percy works job after job until there is nothing left."/>
               <Button x:Name="RunnerPause" Content="❚❚  Pause" Style="{StaticResource Action}"
                       Margin="8,0,0,0" Click="RunnerPause_Click"
-                      ToolTip="Percy finishes the job it is on, reports it, then stops."/>
+                      ToolTip="Percy finishes the job it is on, reports it, then stops. The engine stays warm."/>
+              <Button x:Name="RunnerStop" Content="◼  Stop everything" Style="{StaticResource Action}"
+                      Margin="8,0,0,0" Click="RunnerStop_Click"
+                      ToolTip="Stops the queue AND the engine, frees the graphics memory. The machine is yours."/>
               <TextBlock x:Name="RunnerState" FontSize="15" FontWeight="SemiBold"
                          VerticalAlignment="Center" Margin="16,0,0,0" Text="Percy: checking…"/>
+              <TextBlock x:Name="EngineState" FontSize="13" Foreground="{StaticResource Muted}"
+                         VerticalAlignment="Center" Margin="12,0,0,0" Text="engine: checking…"/>
               <TextBlock x:Name="RunnerDoing" FontSize="13" Foreground="{StaticResource Muted}"
                          VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis" Text=""/>
             </StackPanel>

@@ -87,6 +87,31 @@ public partial class MainWindow
         var running = state is "working" or "waiting" or "idle" or "starting";
         RunnerPlay.IsEnabled = !running;
         RunnerPause.IsEnabled = running && !paused;
+        RunnerStop.IsEnabled = running || EngineUp();
+
+        var engineUp = EngineUp();
+        EngineState.Text = engineUp ? "engine: up" : "engine: off";
+        EngineState.Foreground = Brush(engineUp ? "#2E7D32" : "#8C2F2F");
+
+        // THE SUPERVISOR LIVES HERE NOW (the bat loop is retired): while Play
+        // is on and not paused, a queue that went quiet is started again once
+        // the engine answers. percy_run's single-instance guard makes an
+        // accidental double-spawn exit harmlessly. At most one spawn per two
+        // minutes, so a crashing runner cannot be hammered.
+        if (_keepQueueAlive && !paused && !running && engineUp
+            && DateTime.Now - _lastQueueSpawn > TimeSpan.FromMinutes(2))
+        {
+            SpawnQueue();
+            RunnerState.Text = "Percy: STARTING";
+            RunnerState.Foreground = Brush("#2E7D32");
+            RunnerDoing.Text = "the queue went quiet — starting it again";
+        }
+        else if (_keepQueueAlive && !paused && !running && !engineUp)
+        {
+            RunnerState.Text = "Percy: WAITING FOR THE ENGINE";
+            RunnerState.Foreground = Brush("#B26A00");
+            RunnerDoing.Text = "the engine is loading its models — the queue starts itself when it answers";
+        }
     }
 
     void RunnerPlay_Click(object sender, RoutedEventArgs e)
@@ -105,19 +130,24 @@ public partial class MainWindow
                 return;
             }
 
-            var python = Store.Setting("python_exe", "pythonw.exe");
-            Process.Start(new ProcessStartInfo
+            // ONE BUTTON, EVERYTHING: the engine first (hidden, if it is not
+            // already up), then the queue. If the engine is still loading its
+            // models, the keep-alive starts the queue the moment it answers.
+            _keepQueueAlive = true;
+            var engineWasUp = EngineUp();
+            StartEngineIfDown();
+            if (engineWasUp)
             {
-                FileName = python,
-                Arguments = "\"" + RunnerScript + "\"",
-                WorkingDirectory = Path.GetDirectoryName(RunnerScript)!,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            });
-
-            RunnerState.Text = "Percy: STARTING";
+                SpawnQueue();
+                RunnerState.Text = "Percy: STARTING";
+                RunnerDoing.Text = "asking Baldrick for work";
+            }
+            else
+            {
+                RunnerState.Text = "Percy: WAKING THE ENGINE";
+                RunnerDoing.Text = "loading models takes a few minutes — the queue starts itself when the engine answers";
+            }
             RunnerState.Foreground = Brush("#2E7D32");
-            RunnerDoing.Text = "asking Baldrick for work";
             RunnerPlay.IsEnabled = false;
         }
         catch (Exception ex)
@@ -132,15 +162,33 @@ public partial class MainWindow
     {
         try
         {
+            _keepQueueAlive = false;
             File.WriteAllText(PauseFile, "paused from Percy Agent " + DateTime.Now.ToString("s"));
             RunnerState.Text = "Percy: PAUSING";
             RunnerState.Foreground = Brush("#B26A00");
-            RunnerDoing.Text = "finishing the job it is on, then stopping";
+            RunnerDoing.Text = "finishing the job it is on, then stopping (the engine stays warm — Stop gives the machine back)";
             RunnerPause.IsEnabled = false;
         }
         catch (Exception ex)
         {
             RunnerDoing.Text = "could not pause: " + ex.Message;
+        }
+    }
+
+    void RunnerStop_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            StopEverything();
+            RunnerState.Text = "Percy: STOPPED";
+            RunnerState.Foreground = Brush("#8C2F2F");
+            RunnerDoing.Text = "everything stopped, graphics memory freed — the machine is yours";
+            RunnerStop.IsEnabled = false;
+            RunnerPlay.IsEnabled = true;
+        }
+        catch (Exception ex)
+        {
+            RunnerDoing.Text = "could not stop: " + ex.Message;
         }
     }
 }
