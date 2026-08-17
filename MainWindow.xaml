@@ -325,14 +325,24 @@
                  app's dark theme, so inherited light text vanished on it
                  (Stephen, 16 Aug: "light writing on a light background").
                  Dark text on the light popup; closed-box text explicit too. -->
+            <!-- The app's global TextBlock style (light ink for the dark
+                 theme) reaches INSIDE the popup's generated items and painted
+                 the names white-on-white despite the ComboBoxItem foreground
+                 (Stephen, 16 Aug, second report). A LOCAL foreground on an
+                 explicit ItemTemplate beats the implicit style — the one
+                 layer that actually wins. -->
             <ComboBox x:Name="RunClientBox" Width="280" FontSize="13"
                       VerticalContentAlignment="Center" Foreground="#14161A">
               <ComboBox.ItemContainerStyle>
                 <Style TargetType="ComboBoxItem">
-                  <Setter Property="Foreground" Value="#14161A"/>
                   <Setter Property="Background" Value="White"/>
                 </Style>
               </ComboBox.ItemContainerStyle>
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding}" Foreground="#14161A" FontSize="13"/>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
             </ComboBox>
             <Button Content="Reload" Style="{StaticResource Action}"
                     Click="ReloadProcesses_Click" Margin="12,0,0,0"/>
@@ -340,6 +350,8 @@
           <TextBlock x:Name="RunStatus" FontSize="13" Foreground="{StaticResource Muted}"
                      TextWrapping="Wrap" Margin="0,10,0,0"
                      Text="Loading the process list from Baldrick…"/>
+          <TextBlock FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"
+                     Text="These are the 24 process skills built from your five processes (8 Aug 2026) — the method layer, awaiting your red pen. Nothing here runs on its own; every run is your press, for one client, and the write-ups live in D:\Skills."/>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
